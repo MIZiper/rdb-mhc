@@ -22,8 +22,15 @@ CREATE TABLE IF NOT EXISTS tags (
 
 CREATE TABLE IF NOT EXISTS tag_relations (
     tag_id INTEGER NOT NULL,
-    dependent_tag_id INTEGER NOT NULL
+    dependent_tag_id INTEGER NOT NULL,
+    relation_type VARCHAR NOT NULL CHECK (relation_type IN ('PRIMARY', 'DEPENDENCY')),
+    FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE,
+    FOREIGN KEY (dependent_tag_id) REFERENCES tags(id) ON DELETE CASCADE,
+    PRIMARY KEY (tag_id, dependent_tag_id)
 );
+
+ALTER TABLE tag_relations ADD CONSTRAINT no_self_relation CHECK (tag_id <> dependent_tag_id);
+ALTER TABLE tag_relations ADD CONSTRAINT primary_unique UNIQUE (tag_id) WHERE relation_type = 'PRIMARY';
 
 --- Create Registered Nodes
 
