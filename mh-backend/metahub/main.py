@@ -12,8 +12,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan, debug=True)
 
-app.add_route("/api", tags_router)
-app.add_route("/api", client_router)
+app.include_router(tags_router, prefix="/api")
+app.include_router(client_router, prefix="/api")
 
 if __name__=="__main__":
     import uvicorn
