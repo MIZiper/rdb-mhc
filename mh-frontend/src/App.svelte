@@ -49,7 +49,7 @@
     </Nav>
   </Navbar>
 
-  <ClientAdmin />
+  <ClientAdmin clientId={1} />
 </main>
 
 <style>

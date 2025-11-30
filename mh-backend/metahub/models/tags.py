@@ -1,7 +1,8 @@
+from typing import Optional
 from pydantic import BaseModel
 
 class Tag(BaseModel):
-    id: int | None = None
+    id: Optional[int] = None
     name: str
-    category: int
-    is_exposed: bool
+    category_id: int
+    exposed: bool
