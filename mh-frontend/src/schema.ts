@@ -1,9 +1,12 @@
-export type Tag = {
-    id: number;
+export interface Tag {
+    id: number | null;
     name: string;
+    category: Category;
+    exposed: boolean;
 };
 
-export type Category = {
-    id: number;
+export interface Category {
+    id: number | null;
     name: string;
+    client_id?: number;
 };
