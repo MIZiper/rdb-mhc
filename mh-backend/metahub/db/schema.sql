@@ -2,7 +2,8 @@
 
 CREATE TABLE IF NOT EXISTS clients (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL
+    name VARCHAR(255) NOT NULL,
+    host VARCHAR(255)
 );
 
 CREATE TABLE IF NOT EXISTS categories (
