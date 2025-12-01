@@ -1,12 +1,16 @@
 from pydantic import BaseModel
 from typing import Optional
 
-class Client(BaseModel):
-    id: Optional[int] = None # None when creating a new client
+class ClientCreateUpdate(BaseModel):
     name: str
     host: Optional[str] = None
 
-class Category(BaseModel):
-    id: Optional[int] = None
+class ClientRead(ClientCreateUpdate):
+    id: int
+
+class CategoryCreateUpdate(BaseModel):
     name: str
-    client_id: Optional[int] = None
+
+class CategoryRead(CategoryCreateUpdate):
+    id: int
+    client_id: int

@@ -1,8 +1,10 @@
 from typing import Optional
 from pydantic import BaseModel
 
-class Tag(BaseModel):
-    id: Optional[int] = None
+class TagCreateUpdate(BaseModel):
     name: str
-    category_id: int
     exposed: bool
+
+class TagRead(TagCreateUpdate):
+    id: int
+    category_id: int
