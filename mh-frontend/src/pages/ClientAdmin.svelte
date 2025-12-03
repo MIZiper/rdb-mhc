@@ -7,6 +7,7 @@
     } from "@sveltestrap/sveltestrap";
     import type { Tag, Category } from "../schema";
     import { onMount } from "svelte";
+    import TagsGraph from "../lib/TagsGraph.svelte";
 
     let { clientId }: { clientId: number } = $props();
     let categories: Category[] = [
@@ -22,7 +23,11 @@
     async function addCategory() {
         const name = window.prompt("Enter category name:", "New Category");
         if (!name) return;
-        const category: Category = { id: null, name: name, client_id: clientId };
+        const category: Category = {
+            id: null,
+            name: name,
+            client_id: clientId,
+        };
         const res = await fetch(`/api/clients/${clientId}/categories`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -37,7 +42,12 @@
         if (!activeCategory) return;
         const name = window.prompt("Enter tag name:", "New Tag");
         if (!name) return;
-        const tag: Tag = { id: null, name: name, exposed: false, category: activeCategory };
+        const tag: Tag = {
+            id: null,
+            name: name,
+            exposed: false,
+            category: activeCategory,
+        };
         const res = await fetch(`/api/tags`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -52,7 +62,10 @@
         const res = await fetch(`/api/clients/${clientId}/categories`);
         const data = await res.json();
 
-        if (activeCategory && !data.find((c: Category) => c.id === activeCategory?.id)) {
+        if (
+            activeCategory &&
+            !data.find((c: Category) => c.id === activeCategory?.id)
+        ) {
             activeCategory = data[0];
         }
     }
@@ -61,10 +74,7 @@
         const res = await fetch(`/api/tags`);
         const data = await res.json();
 
-        if (
-            selectedTag &&
-            !data.find((t: Tag) => t.id === selectedTag?.id)
-        ) {
+        if (selectedTag && !data.find((t: Tag) => t.id === selectedTag?.id)) {
             selectedTag = null;
         }
     }
@@ -94,4 +104,5 @@
         <Button color="primary" onclick={() => addTag()}>Add Tag</Button>
         <Button>View All</Button>
     </ButtonGroup>
+    <TagsGraph tags={[]} selectedTag={null} />
 </Container>

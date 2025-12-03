@@ -3,6 +3,7 @@ export interface Tag {
     name: string;
     category: Category;
     exposed: boolean;
+    parent_id?: number | null;
 };
 
 export interface Category {
