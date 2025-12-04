@@ -1,7 +1,7 @@
 export interface Tag {
     id: number | null;
     name: string;
-    category: Category;
+    category_id: number;
     exposed: boolean;
     parent_id?: number | null;
 };

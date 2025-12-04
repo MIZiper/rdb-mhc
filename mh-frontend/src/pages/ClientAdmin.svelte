@@ -10,11 +10,7 @@
     import TagsGraph from "../lib/TagsGraph.svelte";
 
     let { clientId }: { clientId: number } = $props();
-    let categories: Category[] = [
-        { id: 1, name: "ScopeA" },
-        { id: 2, name: "ScopeB" },
-        { id: 3, name: "ScopeC" },
-    ];
+    let categories: Category[] = $state([]);
     let tags: Tag[] = $state([]);
 
     let activeCategory: Category | null = $state(null);
@@ -34,7 +30,8 @@
             body: JSON.stringify(category),
         });
         if (res.ok) {
-            refreshCategories();
+            const data = await res.json();
+            categories.push(data);
         }
     }
 
@@ -46,35 +43,36 @@
             id: null,
             name: name,
             exposed: false,
-            category: activeCategory,
+            category_id: activeCategory.id || 0,
         };
-        const res = await fetch(`/api/tags`, {
+        const res = await fetch(`/api/tags?category_id=${activeCategory.id}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(tag),
         });
         if (res.ok) {
-            refreshTags();
+            const data = await res.json();
+            tags.push(data);
         }
     }
 
     async function refreshCategories() {
         const res = await fetch(`/api/clients/${clientId}/categories`);
         const data = await res.json();
-
+        categories = data;
         if (
             activeCategory &&
-            !data.find((c: Category) => c.id === activeCategory?.id)
+            !categories.find((c: Category) => c.id === activeCategory?.id)
         ) {
-            activeCategory = data[0];
+            activeCategory = categories[0];
         }
     }
 
     async function refreshTags() {
-        const res = await fetch(`/api/tags`);
+        const res = await fetch(`/api/tags?category_id=${activeCategory?.id}`);
         const data = await res.json();
-
-        if (selectedTag && !data.find((t: Tag) => t.id === selectedTag?.id)) {
+        tags = data;
+        if (selectedTag && !tags.find((t: Tag) => t.id === selectedTag?.id)) {
             selectedTag = null;
         }
     }
@@ -104,5 +102,5 @@
         <Button color="primary" onclick={() => addTag()}>Add Tag</Button>
         <Button>View All</Button>
     </ButtonGroup>
-    <TagsGraph tags={[]} selectedTag={null} />
+    <TagsGraph tags={tags} selectedTag={selectedTag} />
 </Container>
