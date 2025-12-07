@@ -35,10 +35,10 @@
     let ctx: CanvasRenderingContext2D | null;
     let simulation: any;
 
-    const nodeW = 100,
-        nodeH = 40;
-    const canvasWidth = 1000,
-        canvasHeight = 600;
+    const nodeW = 128,
+        nodeH = 48;
+    const canvasWidth = 1024,
+        canvasHeight = 720;
 
     let nodes: TagNode[] = [];
     let links: TagRelation[] = [];
