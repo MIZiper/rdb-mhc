@@ -8,7 +8,8 @@
         forceLink,
     } from "d3-force";
 
-    interface TagNode extends Tag {
+    interface TagNode {
+        tag: Tag,
         x: number;
         y: number;
         depth: number;
@@ -19,8 +20,17 @@
     }
     type TagRelation = { source: TagNode; target: TagNode };
 
-    let { tags, selectedTag }: { tags: Tag[]; selectedTag: Tag | null } =
-        $props();
+    let {
+        tags,
+        onSelectTag,
+        onDblClickTag,
+        onReparentTag,
+    }: {
+        tags: Tag[];
+        onSelectTag: (tag: Tag | null) => void;
+        onDblClickTag: (tag: Tag) => void;
+        onReparentTag: (fromTag: Tag, toTag: Tag) => void;
+    } = $props();
     let canvas: HTMLCanvasElement;
     let ctx: CanvasRenderingContext2D | null;
     let simulation: any;
@@ -73,7 +83,8 @@
                             50 * Math.min(l.source.weight, l.target.weight),
                     )
                     .strength(
-                        (l: TagRelation) => 0.8 / Math.min(l.source.weight, l.target.weight),
+                        (l: TagRelation) =>
+                            0.8 / Math.min(l.source.weight, l.target.weight),
                     ),
             )
             .force("vertical", forceVertical())
@@ -144,22 +155,22 @@
         });
 
         // Draw tag nodes
-        nodes.forEach((tag) => {
+        nodes.forEach((node) => {
             if (!ctx) return;
 
             ctx.save();
             ctx.beginPath();
-            ctx.rect(tag.x - nodeW / 2, tag.y - nodeH / 2, nodeW, nodeH);
-            ctx.fillStyle = tag.exposed ? "#ffe4ef" : "#fff";
+            ctx.rect(node.x - nodeW / 2, node.y - nodeH / 2, nodeW, nodeH);
+            ctx.fillStyle = node.tag.exposed ? "#ffe4ef" : "#fff";
             ctx.fill();
             ctx.lineWidth = 2;
-            ctx.strokeStyle = tag.exposed ? "#e91e63" : "#888";
+            ctx.strokeStyle = node.tag.exposed ? "#e91e63" : "#888";
             ctx.stroke();
             ctx.font = "16px sans-serif";
             ctx.fillStyle = "#222";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillText(tag.name, tag.x, tag.y);
+            ctx.fillText(node.tag.name, node.x, node.y);
             ctx.restore();
         });
 
@@ -199,15 +210,15 @@
         excludeNode: TagNode | null = null,
     ) {
         const pt = invertTransform(x, y);
-        for (const tag of nodes) {
-            if (tag === excludeNode) continue;
+        for (const node of nodes) {
+            if (node === excludeNode) continue;
             if (
-                pt.x >= tag.x - nodeW / 2 &&
-                pt.x <= tag.x + nodeW / 2 &&
-                pt.y >= tag.y - nodeH / 2 &&
-                pt.y <= tag.y + nodeH / 2
+                pt.x >= node.x - nodeW / 2 &&
+                pt.x <= node.x + nodeW / 2 &&
+                pt.y >= node.y - nodeH / 2 &&
+                pt.y <= node.y + nodeH / 2
             ) {
-                return tag;
+                return node;
             }
         }
         return null;
@@ -273,23 +284,13 @@
                 // Check for a drop target other than the dragged node
                 const target = getNodeAt(x, y, dragging);
                 if (target && target !== dragging) {
-                    // Update local parent_id and send patch to backend
-                    dragging.parent_id = target.id;
-                    try {
-                        await fetch(`/api/tags/${dragging.id}`, {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ parent_id: target.id }),
-                        });
-                    } catch (err) {
-                        console.error("Failed to update parent on server", err);
-                    }
+                    onReparentTag(dragging.tag, target.tag);
                     // Rebuild links from nodes' parent_id
                     links = nodes
-                        .filter((c) => c.parent_id)
+                        .filter((c) => c.tag.parent_id)
                         .map((c) => ({
-                            source: nodes.find((n) => n.id === c.parent_id),
-                            target: nodes.find((n) => n.id === c.id),
+                            source: nodes.find((n) => n.tag.id === c.tag.parent_id),
+                            target: nodes.find((n) => n.tag.id === c.tag.id),
                         }));
                 }
                 // resume physics
@@ -319,7 +320,7 @@
         draw();
     }
 
-    // Double click logic
+    // Double click logic. Why not listen to DblClick?
     let lastClickTime = 0;
     async function handleClick(e: MouseEvent) {
         const rect = canvas.getBoundingClientRect();
@@ -328,16 +329,10 @@
         const node = getNodeAt(x, y);
         const now = Date.now();
         if (node && now - lastClickTime < 300) {
-            node.exposed = !node.exposed;
-            draw();
-            await fetch(`/api/tags/${node.id}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ exposed: node.exposed }),
-            });
+            onDblClickTag(node.tag);
         }
 
-        // selectedTag = node;
+        onSelectTag(node?.tag || null);
         lastClickTime = now;
     }
 
@@ -351,7 +346,7 @@
         };
 
         nodes = tags.map((c) => ({
-            ...c,
+            tag: c,
             x: canvasWidth / 2 + Math.random() * 100 - 50,
             y: canvasHeight / 2 + Math.random() * 100 - 50,
             depth: getDepth(c),
@@ -367,8 +362,8 @@
         links = tags
             .filter((c) => c.parent_id)
             .map((c) => ({
-                source: nodes.find((n) => n.id === c.parent_id),
-                target: nodes.find((n) => n.id === c.id),
+                source: nodes.find((n) => n.tag.id === c.parent_id),
+                target: nodes.find((n) => n.tag.id === c.id),
             }));
         startSimulation();
     });

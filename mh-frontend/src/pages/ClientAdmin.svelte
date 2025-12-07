@@ -81,7 +81,37 @@
         if (!activeCategory) return;
         refreshTags();
     });
+    $effect(() => {
+        console.log(selectedTag?.name);
+    });
     onMount(refreshCategories);
+
+    async function toggleTagExpose(tag:Tag) {
+            node.exposed = !node.exposed;
+            draw();
+            await fetch(`/api/tags/${node.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ exposed: node.exposed }),
+            });
+        
+    }
+
+    async function reparentTag(fromTag:Tag, toTag: Tag) {
+                    // Update local parent_id and send patch to backend
+                    dragging.tag.parent_id = target.tag.id;
+
+                    try {
+                        await fetch(`/api/tags/${dragging.id}/dependencies`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ parent_id: target.id }),
+                        });
+                    } catch (err) {
+                        console.error("Failed to update parent on server", err);
+                    }
+        
+    }
 </script>
 
 <Container fluid>
@@ -102,5 +132,5 @@
         <Button color="primary" onclick={() => addTag()}>Add Tag</Button>
         <Button>View All</Button>
     </ButtonGroup>
-    <TagsGraph tags={tags} selectedTag={selectedTag} />
+    <TagsGraph tags={tags} onSelectTag={(t: Tag | null) => (selectedTag = t)} onDblClickTag={toggleTagExpose} onReparentTag={reparentTag} />
 </Container>
