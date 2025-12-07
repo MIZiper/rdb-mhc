@@ -28,8 +28,8 @@
     }: {
         tags: Tag[];
         onSelectTag: (tag: Tag | null) => void;
-        onDblClickTag: (tag: Tag) => void;
-        onReparentTag: (fromTag: Tag, toTag: Tag) => void;
+        onDblClickTag: (tag: Tag) => Promise<boolean>;
+        onReparentTag: (fromTag: Tag, toTag: Tag) => Promise<boolean>;
     } = $props();
     let canvas: HTMLCanvasElement;
     let ctx: CanvasRenderingContext2D | null;
@@ -284,14 +284,17 @@
                 // Check for a drop target other than the dragged node
                 const target = getNodeAt(x, y, dragging);
                 if (target && target !== dragging) {
-                    onReparentTag(dragging.tag, target.tag);
-                    // Rebuild links from nodes' parent_id
-                    links = nodes
-                        .filter((c) => c.tag.parent_id)
-                        .map((c) => ({
-                            source: nodes.find((n) => n.tag.id === c.tag.parent_id),
-                            target: nodes.find((n) => n.tag.id === c.tag.id),
-                        }));
+                    const result = await onReparentTag(dragging.tag, target.tag);
+                    if (result) {
+                        dragging.tag.parent_id = target.tag.id;
+                        // Rebuild links from nodes' parent_id
+                        links = nodes
+                            .filter((c) => c.tag.parent_id)
+                            .map((c) => ({
+                                source: nodes.find((n) => n.tag.id === c.tag.parent_id),
+                                target: nodes.find((n) => n.tag.id === c.tag.id),
+                            }));
+                    }
                 }
                 // resume physics
                 isReparenting = false;
@@ -329,7 +332,10 @@
         const node = getNodeAt(x, y);
         const now = Date.now();
         if (node && now - lastClickTime < 300) {
-            onDblClickTag(node.tag);
+            const result = await onDblClickTag(node.tag);
+            if (result) {
+                draw();
+            }
         }
 
         onSelectTag(node?.tag || null);

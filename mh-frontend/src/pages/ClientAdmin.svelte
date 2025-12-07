@@ -69,7 +69,7 @@
     }
 
     async function refreshTags() {
-        const res = await fetch(`/api/tags?category_id=${activeCategory?.id}`);
+        const res = await fetch(`/api/tags/with-parent?category_id=${activeCategory?.id}`);
         const data = await res.json();
         tags = data;
         if (selectedTag && !tags.find((t: Tag) => t.id === selectedTag?.id)) {
@@ -87,30 +87,23 @@
     onMount(refreshCategories);
 
     async function toggleTagExpose(tag:Tag) {
-            node.exposed = !node.exposed;
-            draw();
-            await fetch(`/api/tags/${node.id}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ exposed: node.exposed }),
-            });
-        
+        const res = await fetch(`/api/tags/${tag.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ exposed: !tag.exposed }),
+        });
+        if (res.ok) {
+            tag.exposed = !tag.exposed;
+            return true;
+        }
+        return false;
     }
 
     async function reparentTag(fromTag:Tag, toTag: Tag) {
-                    // Update local parent_id and send patch to backend
-                    dragging.tag.parent_id = target.tag.id;
-
-                    try {
-                        await fetch(`/api/tags/${dragging.id}/dependencies`, {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ parent_id: target.id }),
-                        });
-                    } catch (err) {
-                        console.error("Failed to update parent on server", err);
-                    }
-        
+        const res = await fetch(`/api/tags/${fromTag.id}/parent?parent_id=${toTag.id}`, {
+            method: "PATCH",
+        });
+        return res.ok;
     }
 </script>
 

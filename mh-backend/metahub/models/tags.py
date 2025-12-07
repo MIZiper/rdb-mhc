@@ -8,3 +8,6 @@ class TagCreateUpdate(BaseModel):
 class TagRead(TagCreateUpdate):
     id: int
     category_id: int
+
+class TagWithParent(TagRead):
+    parent_id: Optional[int]
