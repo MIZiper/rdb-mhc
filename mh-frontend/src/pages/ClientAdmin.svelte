@@ -11,8 +11,12 @@
     import { onMount } from "svelte";
     import TagsGraph from "../lib/TagsGraph.svelte";
     import TagInfo from "../lib/TagInfo.svelte";
+    import { route } from "../router";
 
-    let { clientId }: { clientId: number } = $props();
+    route.getParams("/admin/:id");
+
+    // let { clientId }: { clientId: number } = $props();
+    const clientId = Number(route.params.id);
     let categories: Category[] = $state([]);
     let tags: Tag[] = $state([]);
 

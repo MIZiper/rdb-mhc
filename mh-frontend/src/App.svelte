@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { Router } from "sv-router";
+  import "./router.ts";
+
   import { Styles } from "@sveltestrap/sveltestrap";
   import {
     Navbar,
@@ -13,7 +16,7 @@
     DropdownMenu,
     DropdownItem,
   } from "@sveltestrap/sveltestrap";
-  import ClientAdmin from "./pages/ClientAdmin.svelte";
+
   let isOpen: boolean = $state(false);
 </script>
 
@@ -49,7 +52,7 @@
     </Nav>
   </Navbar>
 
-  <ClientAdmin clientId={1} />
+  <Router />
 </main>
 
 <style>
