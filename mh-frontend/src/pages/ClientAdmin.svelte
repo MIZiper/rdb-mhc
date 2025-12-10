@@ -116,7 +116,7 @@
     }
 </script>
 
-<Container fluid>
+<Container class="mt-2" fluid>
     <ButtonGroup>
         {#each categories as category}
             <Button

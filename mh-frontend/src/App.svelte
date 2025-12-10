@@ -23,7 +23,7 @@
 <Styles />
 
 <main>
-  <Navbar>
+  <Navbar style="background-color:whitesmoke;">
     <NavbarBrand href="/">MetaHub</NavbarBrand>
 
     <Nav>
