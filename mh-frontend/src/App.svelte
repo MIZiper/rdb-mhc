@@ -41,13 +41,10 @@
         </DropdownMenu>
       </Dropdown>
       <NavItem>
-        <NavLink href="#">Link</NavLink>
+        <NavLink href="/admin/">Admin</NavLink>
       </NavItem>
       <NavItem>
-        <NavLink href="#">Another Link</NavLink>
-      </NavItem>
-      <NavItem>
-        <NavLink disabled href="#">Disabled Link</NavLink>
+        <NavLink href="/dev-test">Test Page</NavLink>
       </NavItem>
     </Nav>
   </Navbar>

@@ -28,6 +28,11 @@ async def register_category(client_id: int, category: CategoryCreateUpdate, conn
         raise Exception("Failed to register category")
     return CategoryRead(id=result["id"], name=category.name, client_id=client_id)
 
+@router.get("/clients/all/categories", response_model=list[CategoryRead])
+async def get_all_categories(conn: Connection=Depends(get_db)):
+    rows = await conn.fetch("SELECT id, name, client_id FROM categories")
+    return [CategoryRead(id=r['id'], name=r['name'], client_id=r['client_id']) for r in rows]
+
 @router.get("/clients/{client_id}/categories", response_model=list[CategoryRead])
 async def get_categories_of(client_id: int, conn: Connection=Depends(get_db)):
     rows = await conn.fetch("SELECT id, name, client_id FROM categories WHERE client_id=$1", client_id)
