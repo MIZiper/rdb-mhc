@@ -16,5 +16,9 @@
     "svelte-check": "^4.1.5",
     "typescript": "~5.7.2",
     "vite": "^6.3.1"
+  },
+  "dependencies": {
+    "@sveltestrap/sveltestrap": "^7.1.0",
+    "sv-router": "^0.12.0"
   }
 }
