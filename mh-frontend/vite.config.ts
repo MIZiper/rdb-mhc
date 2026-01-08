@@ -1,5 +1,11 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
+
+const env = loadEnv("all", false);
+const apiHost = env.VITE_API_HOST || 'localhost';
+const apiPort = env.VITE_API_PORT || '8000';
+const apiTarget = `http://${apiHost}:${apiPort}`;
+
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -7,7 +13,7 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: "http://localhost:8000",
+        target: apiTarget,
         changeOrigin: true,
       }
     }
