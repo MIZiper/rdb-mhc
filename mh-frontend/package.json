@@ -42,7 +42,7 @@
   },
   "exports": {
     ".": {
-      "types": "./dist-lib/index.d.ts",
+      "types": "./src/index.ts",
       "svelte": "./src/index.ts",
       "default": "./dist-lib/index.js"
     }
