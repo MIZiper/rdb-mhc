@@ -1,7 +1,7 @@
 [project]
-name = "mh-backend"
-version = "0.0.0"
-description = "Add your description here"
+name = "miz-metahub"
+version = "0.0.1a1"
+description = "MetaHub for RDB tag selection"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

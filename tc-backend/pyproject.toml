@@ -1,7 +1,7 @@
 [project]
-name = "tc-backend"
-version = "0.0.0"
-description = "Add your description here"
+name = "miz-tc"
+version = "0.0.1a0"
+description = "TemplateClient for RDB resource browsing"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
