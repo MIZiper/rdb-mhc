@@ -1,0 +1,113 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "(dev) Start MetaHub PostgreSQL",
+			"type": "shell",
+			"problemMatcher": [],
+			"command": [
+				"cd mh-backend",
+				"&&",
+				"podman run -it --rm --name mh_postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=metahub -p 5433:5432 -v $(pwd)/metahub/db/:/docker-entrypoint-initdb.d/ postgres"
+			],
+		},
+		{
+			"label": "(dev) Start MetaHub backend",
+			"type": "shell",
+			"problemMatcher": "$python",
+			"options": {
+				"env": {
+					"POSTGRES_PORT": "5433",
+				}
+			},
+			"command": [
+				"cd mh-backend",
+				"&&",
+				"until /bin/nc -z localhost 5433; do sleep 1; done",
+				"&&",
+				"uv run uvicorn --reload --port=8033 metahub.main:app"
+			]
+		},
+		{
+			"label": "(dev) Start MetaHub frontend",
+			"type": "shell",
+			"problemMatcher": "$tsc",
+			"options": {
+				"env": {
+					"VITE_API_PORT": "8033"
+				}
+			},
+			"command": [
+				"cd mh-frontend",
+				"&&",
+				"until /bin/nc -z localhost 8033; do sleep 1; done",
+				"&&",
+				"pnpm run dev --open",
+			]
+		},
+		{
+			"label": "🚀 MetaHub",
+			"dependsOrder": "parallel",
+			"dependsOn": [
+				"(dev) Start MetaHub PostgreSQL",
+				"(dev) Start MetaHub backend",
+				"(dev) Start MetaHub frontend",
+			],
+			"group": "build"
+		},
+		{
+			"label": "(dev) Start TClient PostgreSQL",
+			"type": "shell",
+			"problemMatcher": [],
+			"command": [
+				"cd tc-backend",
+				"&&",
+				"podman run -it --rm --name tc_postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=tc -p 5430:5432 -v $(pwd)/tc/db/:/docker-entrypoint-initdb.d/ postgres"
+			],
+		},
+		{
+			"label": "(dev) Start TClient backend",
+			"type": "shell",
+			"problemMatcher": "$python",
+			"options": {
+				"env": {
+					"POSTGRES_PORT": "5430",
+				}
+			},
+			"command": [
+				"cd tc-backend",
+				"&&",
+				"until /bin/nc -z localhost 5430; do sleep 1; done",
+				"&&",
+				"uv run uvicorn --reload --port=8030 tc.main:app"
+			]
+		},
+		{
+			"label": "(dev) Start TClient frontend",
+			"type": "shell",
+			"problemMatcher": "$tsc",
+			"options": {
+				"env": {
+					"VITE_API_PORT": "8030"
+				}
+			},
+			"command": [
+				"cd tc-frontend",
+				"&&",
+				"until /bin/nc -z localhost 8030; do sleep 1; done",
+				"&&",
+				"pnpm run dev --open",
+			]
+		},
+		{
+			"label": "🚀 TClient",
+			"dependsOrder": "parallel",
+			"dependsOn": [
+				"(dev) Start TClient PostgreSQL",
+				"(dev) Start TClient backend",
+				"(dev) Start TClient frontend",
+			],
+			"group": "build"
+		}
+	]
+}

@@ -1,0 +1,22 @@
+{
+  "name": "@mizip/mhc",
+  "version": "0.0.1-alpha.0",
+  "description": "RDB with MetaHub and TemplateClient",
+  "keywords": [
+    "metahub",
+    "rdb"
+  ],
+  "homepage": "https://github.com/miziper/rdb-mhc#readme",
+  "bugs": {
+    "url": "https://github.com/miziper/rdb-mhc/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/miziper/rdb-mhc.git"
+  },
+  "license": "Apache-2.0",
+  "author": "MIZiper",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}

@@ -7,7 +7,7 @@ pool = None
 
 DB_USER = os.getenv("POSTGRES_USER", "postgres")
 DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "password")
-DB_NAME = os.getenv("POSTGRES_DB", "anb")
+DB_NAME = os.getenv("POSTGRES_DB", "tc")
 DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
 DB_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
 
