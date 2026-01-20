@@ -11,6 +11,7 @@ DB_NAME = os.getenv("POSTGRES_DB", "metahub")
 DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
 DB_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
 
+
 async def init_pool():
     global pool
 
@@ -22,11 +23,13 @@ async def init_pool():
         port=DB_PORT,
     )
 
+
 async def close_pool():
     global pool
 
     if pool:
         await pool.close()
+
 
 async def get_db() -> AsyncGenerator[asyncpg.connection.Connection, None]:
     async with pool.acquire() as conn:
