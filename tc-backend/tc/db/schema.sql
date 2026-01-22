@@ -10,11 +10,13 @@ CREATE TABLE IF NOT EXISTS nodes (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     description TEXT,
+    backlink VARCHAR(255), -- link to analysis
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     creator_signature VARCHAR(20),
     validate_key VARCHAR(20) DEFAULT NULL,
     frozen BOOLEAN NOT NULL DEFAULT FALSE,
+    frozenlink VARCHAR(255), -- link to release document
     valid BOOLEAN NOT NULL DEFAULT TRUE
 );
 CREATE TRIGGER node_updated_at_trigger

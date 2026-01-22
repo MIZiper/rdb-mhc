@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from asyncpg.connection import Connection
 from tc.db.connection import get_db
 
-router = APIRouter(prefix="nodes")
+router = APIRouter(prefix="/nodes")
 
 
 @router.get("/")
