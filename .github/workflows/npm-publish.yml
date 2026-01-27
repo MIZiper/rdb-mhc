@@ -4,9 +4,8 @@
 name: Node.js Package
 
 on:
-  push:
-    paths:
-      - mh-frontend/package.json
+  release:
+    types: [published]
 
 jobs:
   publish-npm:
