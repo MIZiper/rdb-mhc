@@ -108,6 +108,19 @@
 				"(dev) Start TClient frontend",
 			],
 			"group": "build"
+		},
+		{
+			"label": "🚀 Full MHC",
+			"dependsOrder": "parallel",
+			"dependsOn": [
+				"(dev) Start MetaHub PostgreSQL",
+				"(dev) Start MetaHub backend",
+				"(dev) Start MetaHub frontend",
+				"(dev) Start TClient PostgreSQL",
+				"(dev) Start TClient backend",
+				"(dev) Start TClient frontend",
+			],
+			"group": "build"
 		}
 	]
 }
