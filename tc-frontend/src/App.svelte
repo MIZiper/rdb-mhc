@@ -10,6 +10,10 @@
 
   import { Router } from "sv-router";
   import "./router.ts";
+  import { setContext } from "svelte";
+  import { getConfig } from "./utils/GetRuntimeEnv.js";
+
+  setContext("mh_host", getConfig("MH_HOST"));
 </script>
 
 <Styles />
