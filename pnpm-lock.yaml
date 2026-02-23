@@ -44,6 +44,9 @@ importers:
 
   tc-frontend:
     dependencies:
+      '@mizip/metahub':
+        specifier: workspace:*
+        version: link:../mh-frontend
       '@sveltestrap/sveltestrap':
         specifier: ^7.1.0
         version: 7.1.0(svelte@5.46.4)

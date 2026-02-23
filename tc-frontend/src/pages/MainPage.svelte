@@ -24,7 +24,7 @@
 
 <Container class="my-2" fluid>
     <Searchbar />
-    <ListGroup>
+    <ListGroup class="mt-2">
         {#each items as item}
             <ResourceItem {item} />
         {/each}
