@@ -7,8 +7,8 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TABLE IF NOT EXISTS nodes (
-    id SERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
+    id UUID PRIMARY KEY DEFAULT uuidv7(), -- Require PostgreSQL 18+, for native uuid v7 support
+    title VARCHAR(100) NOT NULL,
     description TEXT,
     backlink VARCHAR(255), -- link to analysis
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -26,7 +26,7 @@ EXECUTE FUNCTION update_updated_at();
 
 CREATE TABLE IF NOT EXISTS node_tags (
     id SERIAL PRIMARY KEY,
-    node_id INTEGER NOT NULL,
+    node_id UUID NOT NULL,
     tag_id INTEGER NOT NULL, -- no restriction since defined in metahub
     FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE
 );
