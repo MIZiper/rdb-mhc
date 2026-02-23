@@ -1,6 +1,5 @@
 <script lang="ts">
   import { Router } from "sv-router";
-  import "./router.ts";
 
   import { Styles } from "@sveltestrap/sveltestrap";
   import {
@@ -16,7 +15,10 @@
     DropdownMenu,
     DropdownItem,
   } from "@sveltestrap/sveltestrap";
+  import { route } from "./router";
+  import { setContext } from "svelte";
 
+  setContext("route", route);
   let isOpen: boolean = $state(false);
 </script>
 
