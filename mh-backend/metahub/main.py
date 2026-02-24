@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from metahub.db.connection import init_pool, close_pool, get_db
 
 from metahub.api.tags import router as tags_router
@@ -11,8 +12,21 @@ async def lifespan(app: FastAPI):
     yield
     await close_pool()
 
+app = FastAPI(lifespan=lifespan)
 
-app = FastAPI(lifespan=lifespan, debug=True)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        f"http://localhost:{p}" # frontend dev
+        for p in range(5170, 5180)
+    ] + [
+        f"http://localhost:{p}" # backend dev
+        for p in range(8030, 8040)
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(tags_router, prefix="/api")
 app.include_router(client_router, prefix="/api")

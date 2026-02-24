@@ -11,7 +11,7 @@
         ModalHeader,
     } from "@sveltestrap/sveltestrap";
     import type { Category, Tag } from "../schema";
-    import { onMount } from "svelte";
+    import { getContext, onMount } from "svelte";
 
     interface Layer {
         options: Tag[];
@@ -27,6 +27,7 @@
     let tagLayers: Layer[] = $state([]);
     let candidateTags: Tag[] = $state([]);
     let currentTag: Tag | null = $state(null);
+    let metahub_host = (getContext("mh_host") as string) || "";
 
     let cacheCategoryTags: Map<number, Tag[]> = new Map();
     let currentTagsCache: Tag[] = [];
@@ -62,7 +63,7 @@
     }
 
     onMount(async () => {
-        const res = await fetch(`/api/clients/all/categories`);
+        const res = await fetch(`${metahub_host}/api/clients/all/categories`);
         const data = await res.json();
         categories = data;
     });
@@ -73,7 +74,7 @@
         }
         if (!cacheCategoryTags.has(selectedCategoryId)) {
             const res = await fetch(
-                `/api/tags/with-parent?category_id=${selectedCategoryId}`,
+                `${metahub_host}/api/tags/with-parent?category_id=${selectedCategoryId}`,
             );
             const data: Tag[] = await res.json();
             cacheCategoryTags.set(selectedCategoryId, data);

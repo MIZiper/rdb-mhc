@@ -13,7 +13,7 @@ async def lifespan(app: FastAPI):
     await close_pool()
 
 
-app = FastAPI(lifespan=lifespan, debug=True)
+app = FastAPI(lifespan=lifespan)
 
 app.include_router(node_router, prefix="/api")
 
