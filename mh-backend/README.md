@@ -1,0 +1,9 @@
+# MetaHub backend
+
+## Exposed variables
+
+- POSTGRES_USER
+- POSTGRES_PASSWORD
+- POSTGRES_DB
+- POSTGRES_HOST
+- POSTGRES_PORT
