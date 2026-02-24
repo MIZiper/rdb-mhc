@@ -24,7 +24,7 @@
     <NavbarBrand>Resource database</NavbarBrand>
     <Nav>
       <NavItem>
-        <NavLink>New</NavLink>
+        <NavLink href="/new">New</NavLink>
       </NavItem>
       <NavItem>
         <NavLink href="/dev-test">Test</NavLink>
