@@ -30,3 +30,10 @@ CREATE TABLE IF NOT EXISTS node_tags (
     tag_id INTEGER NOT NULL, -- no restriction since defined in metahub
     FOREIGN KEY (node_id) REFERENCES nodes(id) ON DELETE CASCADE
 );
+
+-- Context search
+ALTER TABLE nodes
+ADD COLUMN search_vector tsvector
+GENERATED ALWAYS AS (to_tsvector('english', coalesce(title, '') || ' ' || coalesce(description, ''))) STORED;
+
+CREATE INDEX idx_nodes_search_vector ON nodes USING GIN (search_vector);

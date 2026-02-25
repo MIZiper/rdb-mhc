@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
+from typing import Optional
 
 class TagMeta(BaseModel):
     id: int
@@ -13,5 +14,11 @@ class NodeMeta(BaseModel):
     tags: list[TagMeta]
 
 class NodeDetail(NodeMeta):
+    id: Optional[str] = None
+    updated_at: Optional[datetime] = None
     backlink: str
-    frozenlink: str
+    frozenlink: Optional[str] = None
+
+class NodeResponse(BaseModel):
+    items: list[NodeMeta]
+    total: int
