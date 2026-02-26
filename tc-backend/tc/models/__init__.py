@@ -11,7 +11,7 @@ class NodeMeta(BaseModel):
     title: str
     description: str
     updated_at: datetime
-    tags: list[TagMeta]
+    tag_ids: list[int]
 
 class NodeDetail(NodeMeta):
     id: Optional[str] = None

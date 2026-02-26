@@ -37,3 +37,7 @@ ADD COLUMN search_vector tsvector
 GENERATED ALWAYS AS (to_tsvector('english', coalesce(title, '') || ' ' || coalesce(description, ''))) STORED;
 
 CREATE INDEX idx_nodes_search_vector ON nodes USING GIN (search_vector);
+
+-- Index
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_node_tags_tag_id ON node_tags(tag_id);
+CREATE INDEX IF NOT EXISTS idx_node_tags_node_id ON node_tags(node_id);

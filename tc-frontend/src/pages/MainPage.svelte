@@ -11,7 +11,7 @@
         Row,
     } from "@sveltestrap/sveltestrap";
     import ResourceItem from "../lib/ResourceItem.svelte";
-    import type { ItemMeta } from "../schema";
+    import type { ItemMeta, Tag } from "../schema";
     import { onMount } from "svelte";
     import { p as pp, navigate } from "../router";
 
@@ -38,6 +38,17 @@
         return pages;
     });
 
+    async function fetch_tags_info(all_tag_ids:number[]) {
+        // get data from metahub
+    }
+
+    function construct_tags_by_ids(tag_ids: number[]): Tag[] {
+        return tag_ids.map((e) => ({
+            id: e,
+            name: "No name yet",
+        }));
+    }
+
     async function loadData(q: string, page: number) {
         loading = true;
         error = null;
@@ -53,12 +64,15 @@
             if (!res.ok) throw new Error("Failed to fetch");
             const data = await res.json();
 
-            items = data.items.map((e) => ({
+            const uniqueTagIds = [...new Set(data.items.flatMap((item:any) => item.tag_ids))] as number[];
+            await fetch_tags_info(uniqueTagIds)
+
+            items = data.items.map((e: any) => ({
                 id: e.id,
                 title: e.title,
                 description: e.description,
                 update_time: new Date(e.updated_at),
-                tags: [],
+                tags: construct_tags_by_ids(e.tag_ids),
             }));
 
             totalItems = data.total || 0;
