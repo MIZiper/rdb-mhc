@@ -14,3 +14,8 @@ class TagRead(TagCreateUpdate):
 
 class TagWithParent(TagRead):
     parent_id: Optional[int]
+
+class TagExposed(BaseModel):
+    id: int
+    name: str
+    parent_id: Optional[int] = None

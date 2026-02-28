@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from asyncpg.connection import Connection
 from metahub.db.connection import get_db
-from metahub.models.tags import TagCreateUpdate, TagRead, TagWithParent
+from metahub.models.tags import TagCreateUpdate, TagRead, TagWithParent, TagExposed
 from metahub.models.clients import CategoryRead
 
 router = APIRouter()
@@ -63,6 +63,12 @@ async def add_tag_for(
         id=result["id"], name=tag.name, category_id=category_id, exposed=tag.exposed
     )
 
+@router.post("/tags/search", response_model=list[TagExposed])
+async def search_tag_relationships(tag_ids: list[int], conn: Connection=Depends(get_db)):
+    rows = await conn.fetch("SELECT id, name FROM tags WHERE id=ANY($1)", tag_ids)
+    return [
+        TagExposed(id=r['id'], name=r['name']) for r in rows
+    ]
 
 @router.delete("/tags/{tag_id}")
 async def delete_tag(tag_id: int, conn: Connection = Depends(get_db)):

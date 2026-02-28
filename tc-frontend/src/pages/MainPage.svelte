@@ -12,7 +12,7 @@
     } from "@sveltestrap/sveltestrap";
     import ResourceItem from "../lib/ResourceItem.svelte";
     import type { ItemMeta, Tag } from "../schema";
-    import { onMount } from "svelte";
+    import { getContext, onMount } from "svelte";
     import { p as pp, navigate } from "../router";
 
     let searchBind = $state("");
@@ -38,14 +38,28 @@
         return pages;
     });
 
-    async function fetch_tags_info(all_tag_ids:number[]) {
-        // get data from metahub
+    let _tags_cache: Record<number, Record<string, any>> = {};
+    let metahub_host = (getContext("mh_host") as string) || "";
+    async function fetch_tags_info(
+        mh_host: string = "",
+        all_tag_ids: number[],
+    ) {
+        // make this exportable
+        if (all_tag_ids.length === 0) return;
+        const res = await fetch(`${mh_host}/api/tags/search`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(all_tag_ids),
+        });
+        if (!res.ok) return;
+        const data: Record<string, any>[] = await res.json();
+        _tags_cache = Object.fromEntries(data.map((itm) => [itm.id, itm]));
     }
 
     function construct_tags_by_ids(tag_ids: number[]): Tag[] {
         return tag_ids.map((e) => ({
             id: e,
-            name: "No name yet",
+            name: _tags_cache[e].name,
         }));
     }
 
@@ -64,8 +78,11 @@
             if (!res.ok) throw new Error("Failed to fetch");
             const data = await res.json();
 
-            const uniqueTagIds = [...new Set(data.items.flatMap((item:any) => item.tag_ids))] as number[];
-            await fetch_tags_info(uniqueTagIds)
+            const uniqueTagIds = [
+                ...new Set(data.items.flatMap((item: any) => item.tag_ids)),
+            ] as number[];
+
+            await fetch_tags_info(metahub_host, uniqueTagIds);
 
             items = data.items.map((e: any) => ({
                 id: e.id,
