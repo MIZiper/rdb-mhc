@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Body
 from typing import Optional
 from asyncpg.connection import Connection
 from tc.db.connection import get_db
@@ -96,21 +96,13 @@ async def list_nodes(
         total=count_result
     )
 
-@router.get("/by_tags")
+@router.post("/by_tags")
 async def search_nodes_by_tags(
     conn: Connection = Depends(get_db),
-    tag_ids: list[int]=Query(..., description="Search by tags"),
+    tag_ids: list[int]=Body(..., description="Search by tags"),
     limit: int=Query(20, ge=1, le=100, description="Limits of results returned"),
     mode: Optional[str]=Query("exact", description="Tag search mode: exact | ancestors | expanded"),
 ):
-    """
-        /nodes/by_tags?t=1,2,5&mode=exact
-        /nodes/by_tags?mode=ancestors
-        /nodes/by_tags?mode=expanded
-    """
-
-    # get tags by t (tags_str)
-
     if not tag_ids:
         return []
 
@@ -123,8 +115,9 @@ async def search_nodes_by_tags(
     query = """
         SELECT
             n.id,
-            n.name,
-            -- 这里可以添加更多 nodes 表的字段，例如 n.description, n.created_at
+            n.title,
+            n.description,
+            n.updated_at,
             COUNT(nt.tag_id) AS match_count,
             array_agg(nt.tag_id) AS tag_ids
         FROM nodes n
@@ -139,10 +132,16 @@ async def search_nodes_by_tags(
     final_query = query.replace("${limit_clause}", "LIMIT $2" if limit else "")
     args = [tag_ids, limit] if limit else [tag_ids]
 
-    rows = await conn.fetch(query, *args)
+    rows = await conn.fetch(final_query, *args)
 
     return NodeResponse(
-        items=[NodeMeta() for r in rows],
+        items=[NodeMeta(
+            id=str(r['id']),
+            title=r['title'],
+            description=r['description'],
+            updated_at=r['updated_at'],
+            tag_ids=r['tag_ids'],
+        ) for r in rows],
         total=len(rows)
     )
 

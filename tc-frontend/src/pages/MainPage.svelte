@@ -14,6 +14,7 @@
     import type { ItemMeta, Tag } from "../schema";
     import { getContext, onMount } from "svelte";
     import { p as pp, navigate } from "../router";
+    import { fetch_tags_info, construct_tags_by_ids } from "./FetchMetaHubTags";
 
     let searchBind = $state("");
     let qSearch = $state("");
@@ -38,31 +39,7 @@
         return pages;
     });
 
-    let _tags_cache: Record<number, Record<string, any>> = {};
     let metahub_host = (getContext("mh_host") as string) || "";
-    async function fetch_tags_info(
-        mh_host: string = "",
-        all_tag_ids: number[],
-    ) {
-        // make this exportable
-        if (all_tag_ids.length === 0) return;
-        const res = await fetch(`${mh_host}/api/tags/search`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(all_tag_ids),
-        });
-        if (!res.ok) return;
-        const data: Record<string, any>[] = await res.json();
-        _tags_cache = Object.fromEntries(data.map((itm) => [itm.id, itm]));
-    }
-
-    function construct_tags_by_ids(tag_ids: number[]): Tag[] {
-        return tag_ids.map((e) => ({
-            id: e,
-            name: _tags_cache[e].name,
-        }));
-    }
-
     async function loadData(q: string, page: number) {
         loading = true;
         error = null;
@@ -82,14 +59,17 @@
                 ...new Set(data.items.flatMap((item: any) => item.tag_ids)),
             ] as number[];
 
-            await fetch_tags_info(metahub_host, uniqueTagIds);
+            const tags_cache = await fetch_tags_info(
+                metahub_host,
+                uniqueTagIds,
+            );
 
             items = data.items.map((e: any) => ({
                 id: e.id,
                 title: e.title,
                 description: e.description,
                 update_time: new Date(e.updated_at),
-                tags: construct_tags_by_ids(e.tag_ids),
+                tags: construct_tags_by_ids(e.tag_ids, tags_cache),
             }));
 
             totalItems = data.total || 0;
