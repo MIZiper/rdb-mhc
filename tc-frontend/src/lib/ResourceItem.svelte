@@ -20,7 +20,7 @@
 
 <Card class="mb-1">
     <CardBody>
-        <CardSubtitle>
+        <CardSubtitle style="border-left: 4px solid gray; padding-left: 6px;">
             <NavLink href="/items/{item.id}">{item.title}</NavLink>
         </CardSubtitle>
         <p class="update_date">
@@ -30,9 +30,9 @@
     </CardBody>
     <CardFooter>
         {#each item.tags as tag}
-            <Badge pill class="me-1" href="/tags/{tag.id}">
+            <Badge pill class="me-1" href="/tags/{tag.id}/{encodeURI(tag.name)}">
                 {tag.name}
-                <a href={`${metahub_host}/registered/${tag.id}`}>🔗</a>
+                <a href={`${metahub_host}/registered/${tag.id}/${encodeURI(tag.name)}`}>🔗</a>
             </Badge>
         {/each}
     </CardFooter>

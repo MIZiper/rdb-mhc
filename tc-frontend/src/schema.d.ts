@@ -6,6 +6,10 @@ export interface ItemMeta {
     tags: Tag[]
 }
 
+export interface ItemDetail extends ItemMeta{
+
+}
+
 export interface Tag {
     id: number
     name: string
