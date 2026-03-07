@@ -1,6 +1,5 @@
 {
   "name": "@mizip/tc",
-  "private": true,
   "version": "0.0.1-alpha.0",
   "description": "TemplateClient for RDB resource browsing",
   "keywords": [
@@ -22,6 +21,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:svelte": "svelte-package -i src -o dist-lib",
+    "prepublishOnly": "npm run build:svelte",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json"
   },
@@ -37,5 +38,19 @@
     "@sveltestrap/sveltestrap": "^7.1.0",
     "sv-router": "^0.12.0",
     "@mizip/metahub": "workspace:*"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "svelte": "./src/index.ts",
+      "default": "./dist-lib/index.js"
+    }
+  },
+  "files": [
+    "dist-lib",
+    "src"
+  ],
+  "peerDependencies": {
+    "svelte": "^4.0.0 || ^5.0.0"
   }
 }

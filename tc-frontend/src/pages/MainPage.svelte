@@ -13,7 +13,7 @@
     import ResourceItem from "../lib/ResourceItem.svelte";
     import type { ItemMeta, Tag } from "../schema";
     import { getContext, onMount } from "svelte";
-    import { p as pp, navigate } from "../router";
+    // import { p as pp, navigate } from "../router";
     import { fetch_tags_info, construct_tags_by_ids } from "./FetchMetaHubTags";
 
     let searchBind = $state("");
@@ -103,6 +103,7 @@
         }
 
         navigate("/", { search: params.toString() });
+        // TODO: fix
 
         loadData(q, 1).then(() => {
             currentPage = 1;
