@@ -48,6 +48,13 @@
         ).tag_id;
         await loadData([Number(tag_id_str)]);
     });
+
+    $effect(() => {
+        const tag_id_str = router.route.getParams(
+            "/tags/:tag_id/:tag_str",
+        ).tag_id;
+        loadData([Number(tag_id_str)]).then(() => {});
+    });
 </script>
 
 <Container class="my-2" fluid>

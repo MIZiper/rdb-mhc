@@ -100,7 +100,7 @@ async def list_nodes(
 async def search_nodes_by_tags(
     conn: Connection = Depends(get_db),
     tag_ids: list[int]=Body(..., description="Search by tags"),
-    limit: int=Query(20, ge=1, le=100, description="Limits of results returned"),
+    limit: Optional[int]=Query(None, ge=1, le=100, description="Limits of results returned"),
     mode: Optional[str]=Query("exact", description="Tag search mode: exact | ancestors | expanded"),
 ):
     if not tag_ids:
@@ -119,7 +119,11 @@ async def search_nodes_by_tags(
             n.description,
             n.updated_at,
             COUNT(nt.tag_id) AS match_count,
-            array_agg(nt.tag_id) AS tag_ids
+            (
+                SELECT array_agg(t2.tag_id)
+                FROM node_tags t2
+                WHERE t2.node_id = n.id
+            ) AS tag_ids
         FROM nodes n
         JOIN node_tags nt ON n.id = nt.node_id
         WHERE nt.tag_id = ANY($1)
