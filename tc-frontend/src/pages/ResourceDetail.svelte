@@ -11,12 +11,13 @@
         Container,
         Row,
     } from "@sveltestrap/sveltestrap";
-    import { route } from "../router";
+
     import type { ItemDetail } from "../schema";
     import { getContext, onMount } from "svelte";
     import { construct_tags_by_ids, fetch_tags_info } from "./FetchMetaHubTags";
 
-    let item_id = route.getParams("/items/:id").id;
+    let router: any = getContext("router");
+    let item_id = router.route.getParams("/items/:id").id;
     let item: ItemDetail | null = $state(null);
     let metahub_host = (getContext("mh_host") as string) || "";
 

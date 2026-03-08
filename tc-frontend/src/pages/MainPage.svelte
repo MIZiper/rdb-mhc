@@ -1,20 +1,19 @@
 <script lang="ts">
     import {
         Button,
+        ButtonGroup,
         Col,
         Container,
         Input,
         ListGroup,
-        Pagination,
-        PaginationItem,
-        PaginationLink,
         Row,
     } from "@sveltestrap/sveltestrap";
     import ResourceItem from "../lib/ResourceItem.svelte";
     import type { ItemMeta, Tag } from "../schema";
     import { getContext, onMount } from "svelte";
-    // import { p as pp, navigate } from "../router";
     import { fetch_tags_info, construct_tags_by_ids } from "./FetchMetaHubTags";
+
+    let router: any = getContext("router");
 
     let searchBind = $state("");
     let qSearch = $state("");
@@ -48,6 +47,7 @@
             const apiParams = {
                 page: page.toString(),
                 q: q || "",
+                page_size: pageSize.toString(),
             };
 
             const qs = new URLSearchParams(apiParams).toString();
@@ -93,20 +93,16 @@
         await loadData(q, page);
     });
 
-    function handleSearch() {
-        const q = searchBind.trim();
-        let params;
-        if (q) {
-            params = new URLSearchParams({ q, page: "1" });
-        } else {
-            params = new URLSearchParams({ page: "1" });
-        }
+    function updateItems(q: string = "", page: number = 1) {
+        const searchParams = new URLSearchParams();
 
-        navigate("/", { search: params.toString() });
-        // TODO: fix
+        if (q) searchParams.set("q", q);
+        if (page) searchParams.set("page", page.toString());
 
-        loadData(q, 1).then(() => {
-            currentPage = 1;
+        const params = Object.fromEntries(searchParams);
+        router.navigate("/", { search: params, replace: true });
+        loadData(q, page).then(() => {
+            currentPage = page;
             qSearch = q;
         });
     }
@@ -123,10 +119,13 @@
                 type="search"
                 placeholder="Search by text"
                 bind:value={searchBind}
+                onkeypress={(e)=>{if (e.key=="Enter") updateItems(searchBind.trim())}}
             />
         </Col>
         <Col xs="auto">
-            <Button onclick={handleSearch}>Search</Button>
+            <Button onclick={() => updateItems(searchBind.trim())}
+                >Search</Button
+            >
         </Col>
     </Row>
 
@@ -147,42 +146,32 @@
             {/each}
         </ListGroup>
 
-        <Pagination>
-            <PaginationItem disabled={currentPage <= 1}>
-                <PaginationLink
-                    first
-                    href={`?page=${1}` + (qSearch ? `&q=${qSearch}` : "")}
-                />
-            </PaginationItem>
-            <PaginationItem disabled={currentPage <= 1}>
-                <PaginationLink
-                    previous
-                    href={`?page=${currentPage - 1}` +
-                        (qSearch ? `&q=${qSearch}` : "")}
-                />
-            </PaginationItem>
+        <ButtonGroup>
+            <Button
+                disabled={currentPage <= 1}
+                onclick={() => updateItems(qSearch, 1)}>«</Button
+            >
+
+            <Button
+                disabled={currentPage <= 1}
+                onclick={() => updateItems(qSearch, currentPage - 1)}>‹</Button
+            >
             {#each pageNumbers as num}
-                <PaginationItem active={num === currentPage}>
-                    <PaginationLink
-                        href={`?page=${num}` + (qSearch ? `&q=${qSearch}` : "")}
-                        >{num}</PaginationLink
-                    >
-                </PaginationItem>
+                <Button
+                    active={num === currentPage}
+                    onclick={() => updateItems(qSearch, num)}>{num}</Button
+                >
             {/each}
-            <PaginationItem disabled={currentPage >= totalPages}>
-                <PaginationLink
-                    next
-                    href={`?page=${currentPage + 1}` +
-                        (qSearch ? `&q=${qSearch}` : "")}
-                />
-            </PaginationItem>
-            <PaginationItem disabled={currentPage >= totalPages}>
-                <PaginationLink
-                    last
-                    href={`?page=${totalPages}` +
-                        (qSearch ? `&q=${qSearch}` : "")}
-                />
-            </PaginationItem>
-        </Pagination>
+
+            <Button
+                disabled={currentPage >= totalPages}
+                onclick={() => updateItems(qSearch, currentPage + 1)}>›</Button
+            >
+
+            <Button
+                disabled={currentPage >= totalPages}
+                onclick={() => updateItems(qSearch, totalPages)}>»</Button
+            >
+        </ButtonGroup>
     {/if}
 </Container>

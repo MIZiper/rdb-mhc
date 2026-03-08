@@ -9,12 +9,12 @@
   } from "@sveltestrap/sveltestrap";
 
   import { Router } from "sv-router";
-  import { route } from "./router";
   import { setContext } from "svelte";
   import { getConfig } from "./utils/GetRuntimeEnv.js";
+  import { router } from "./router";
 
   setContext("mh_host", getConfig("MH_HOST"));
-  setContext("route", route);
+  setContext("router", router);
 </script>
 
 <Styles />

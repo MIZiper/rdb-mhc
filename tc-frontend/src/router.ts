@@ -6,7 +6,7 @@ import NewResource from "./pages/NewResource.svelte";
 import SearchResult from "./pages/SearchResult.svelte";
 
 
-export const { p, navigate, isActive, route } = createRouter({
+export const router = createRouter({
     '/': MainPage,
     '/items/:id': ResourcePage,
     '/dev-test': Searchbar,

@@ -2,10 +2,11 @@
     import { Container, ListGroup } from "@sveltestrap/sveltestrap";
     import ResourceItem from "../lib/ResourceItem.svelte";
     import type { ItemMeta } from "../schema";
-    import { route } from "../router";
+
     import { getContext, onMount } from "svelte";
     import { construct_tags_by_ids, fetch_tags_info } from "./FetchMetaHubTags";
 
+    let router: any = getContext("router");
     let items: ItemMeta[] = $state([]);
     let loading = $state(false);
 
@@ -42,7 +43,9 @@
     }
 
     onMount(async () => {
-        const tag_id_str = route.getParams("/tags/:tag_id/:tag_str").tag_id;
+        const tag_id_str = router.route.getParams(
+            "/tags/:tag_id/:tag_str",
+        ).tag_id;
         await loadData([Number(tag_id_str)]);
     });
 </script>
