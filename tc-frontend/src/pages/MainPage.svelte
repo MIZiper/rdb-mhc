@@ -6,12 +6,16 @@
         Container,
         Input,
         ListGroup,
+        Pagination,
+        PaginationItem,
+        PaginationLink,
         Row,
     } from "@sveltestrap/sveltestrap";
     import ResourceItem from "../lib/ResourceItem.svelte";
     import type { ItemMeta, Tag } from "../schema";
     import { getContext, onMount } from "svelte";
     import { fetch_tags_info, construct_tags_by_ids } from "./FetchMetaHubTags";
+    import { searchParams } from "sv-router";
 
     let router: any = getContext("router");
 
@@ -81,31 +85,16 @@
         }
     }
 
-    onMount(async () => {
-        const params = new URLSearchParams(location.search);
-        const q = params.get("q") || "";
-        const page = parseInt(params.get("page") || "1", 10);
+    $effect(() => {
+        const q = searchParams.get("q") || "";
+        const page = parseInt(searchParams.get("page") || "1", 10);
 
-        qSearch = q;
-        searchBind = q;
-        currentPage = isNaN(page) || page < 1 ? 1 : page;
-
-        await loadData(q, page);
-    });
-
-    function updateItems(q: string = "", page: number = 1) {
-        const searchParams = new URLSearchParams();
-
-        if (q) searchParams.set("q", q);
-        if (page) searchParams.set("page", page.toString());
-
-        const params = Object.fromEntries(searchParams);
-        router.navigate("/", { search: params, replace: true });
-        loadData(q, page).then(() => {
-            currentPage = page;
+        loadData(String(q), Number(page)).then(() => {
             qSearch = q;
+            searchBind = q;
+            currentPage = isNaN(page) || page < 1 ? 1 : page;
         });
-    }
+    });
 </script>
 
 <svelte:head>
@@ -119,11 +108,18 @@
                 type="search"
                 placeholder="Search by text"
                 bind:value={searchBind}
-                onkeypress={(e)=>{if (e.key=="Enter") updateItems(searchBind.trim())}}
+                onkeypress={(e) => {
+                    if (e.key == "Enter")
+                        router.navigate("/", {
+                            search: { q: searchBind.trim() },
+                        });
+                }}
             />
         </Col>
         <Col xs="auto">
-            <Button onclick={() => updateItems(searchBind.trim())}
+            <Button
+                onclick={() =>
+                    router.navigate("/", { search: { q: searchBind.trim() } })}
                 >Search</Button
             >
         </Col>
@@ -146,32 +142,46 @@
             {/each}
         </ListGroup>
 
-        <ButtonGroup>
-            <Button
-                disabled={currentPage <= 1}
-                onclick={() => updateItems(qSearch, 1)}>«</Button
-            >
-
-            <Button
-                disabled={currentPage <= 1}
-                onclick={() => updateItems(qSearch, currentPage - 1)}>‹</Button
-            >
+        <Pagination>
+            <PaginationItem disabled={currentPage <= 1}>
+                <PaginationLink
+                    first
+                    href={router.p("/", { search: { q: qSearch, page: 1 } })}
+                />
+            </PaginationItem>
+            <PaginationItem disabled={currentPage <= 1}>
+                <PaginationLink
+                    previous
+                    href={router.p("/", {
+                        search: { q: qSearch, page: currentPage - 1 },
+                    })}
+                />
+            </PaginationItem>
             {#each pageNumbers as num}
-                <Button
-                    active={num === currentPage}
-                    onclick={() => updateItems(qSearch, num)}>{num}</Button
-                >
+                <PaginationItem active={num === currentPage}>
+                    <PaginationLink
+                        href={router.p("/", {
+                            search: { q: qSearch, page: num },
+                        })}>{num}</PaginationLink
+                    >
+                </PaginationItem>
             {/each}
-
-            <Button
-                disabled={currentPage >= totalPages}
-                onclick={() => updateItems(qSearch, currentPage + 1)}>›</Button
-            >
-
-            <Button
-                disabled={currentPage >= totalPages}
-                onclick={() => updateItems(qSearch, totalPages)}>»</Button
-            >
-        </ButtonGroup>
+            <PaginationItem disabled={currentPage >= totalPages}>
+                <PaginationLink
+                    next
+                    href={router.p("/", {
+                        search: { q: qSearch, page: currentPage + 1 },
+                    })}
+                />
+            </PaginationItem>
+            <PaginationItem disabled={currentPage >= totalPages}>
+                <PaginationLink
+                    last
+                    href={router.p("/", {
+                        search: { q: qSearch, page: totalPages },
+                    })}
+                />
+            </PaginationItem>
+        </Pagination>
     {/if}
 </Container>

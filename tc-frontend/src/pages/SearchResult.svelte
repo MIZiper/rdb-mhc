@@ -42,13 +42,6 @@
         loading = false;
     }
 
-    onMount(async () => {
-        const tag_id_str = router.route.getParams(
-            "/tags/:tag_id/:tag_str",
-        ).tag_id;
-        await loadData([Number(tag_id_str)]);
-    });
-
     $effect(() => {
         const tag_id_str = router.route.getParams(
             "/tags/:tag_id/:tag_str",
