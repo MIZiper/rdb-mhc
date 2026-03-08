@@ -15,10 +15,10 @@
     DropdownMenu,
     DropdownItem,
   } from "@sveltestrap/sveltestrap";
-  import { route } from "./router";
+  import { router } from "./router";
   import { setContext } from "svelte";
 
-  setContext("route", route);
+  setContext("router", router);
   let isOpen: boolean = $state(false);
 </script>
 

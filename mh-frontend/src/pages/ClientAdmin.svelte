@@ -12,11 +12,11 @@
     import TagsGraph from "../lib/TagsGraph.svelte";
     import TagInfo from "../lib/TagInfo.svelte";
 
-    const route = getContext("route");
-    route.getParams("/admin/:id");
+    const router = getContext("router");
+    router.route.getParams("/admin/:id");
 
     // let { clientId }: { clientId: number } = $props();
-    const clientId = Number(route.params.id);
+    const clientId = Number(router.route.params.id);
     let categories: Category[] = $state([]);
     let tags: Tag[] = $state([]);
 
