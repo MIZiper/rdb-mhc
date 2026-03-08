@@ -21,7 +21,10 @@
 
 <main>
   <Navbar style="background-color:whitesmoke;">
-    <NavbarBrand>Resource database</NavbarBrand>
+    <NavbarBrand>
+      <img src="/tc-logo.png" alt="TC logo" height="36px" />
+      Resource database
+    </NavbarBrand>
     <Nav>
       <NavItem>
         <NavLink href="/new">New</NavLink>

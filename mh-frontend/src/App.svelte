@@ -26,10 +26,13 @@
 
 <main>
   <Navbar style="background-color:whitesmoke;">
-    <NavbarBrand href="/">MetaHub</NavbarBrand>
+    <NavbarBrand>
+      <img src="/mh-logo.png" alt="MetaHub logo" height="36px" />
+      MetaHub
+    </NavbarBrand>
 
     <Nav>
-      <NavItem>
+      <!-- <NavItem>
         <NavLink href="#">Link</NavLink>
       </NavItem>
       <Dropdown nav {isOpen} toggle={() => (isOpen = !isOpen)}>
@@ -41,7 +44,7 @@
           <DropdownItem divider />
           <DropdownItem>Another Action</DropdownItem>
         </DropdownMenu>
-      </Dropdown>
+      </Dropdown> -->
       <NavItem>
         <NavLink href="/admin/">Admin</NavLink>
       </NavItem>
