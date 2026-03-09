@@ -10,27 +10,27 @@
         ModalFooter,
         ModalHeader,
     } from "@sveltestrap/sveltestrap";
-    import type { Category, Tag } from "../schema";
+    import type { Category, TagMeta } from "../schema";
     import { getContext, onMount } from "svelte";
 
     interface Layer {
-        options: Tag[];
+        options: TagMeta[];
         selected: number | null;
     }
 
     let {
         onSelect,
         isOpen = true,
-    }: { onSelect: (tags: Tag[]) => void; isOpen: boolean } = $props();
+    }: { onSelect: (tags: TagMeta[]) => void; isOpen: boolean } = $props();
 
     let categories: Category[] = $state([]);
     let tagLayers: Layer[] = $state([]);
-    let candidateTags: Tag[] = $state([]);
-    let currentTag: Tag | null = $state(null);
+    let candidateTags: TagMeta[] = $state([]);
+    let currentTag: TagMeta | null = $state(null);
     let metahub_host = (getContext("mh_host") as string) || "";
 
-    let cacheCategoryTags: Map<number, Tag[]> = new Map();
-    let currentTagsCache: Tag[] = [];
+    let cacheCategoryTags: Map<number, TagMeta[]> = new Map();
+    let currentTagsCache: TagMeta[] = [];
 
     function refreshCurrentTag() {
         for (let i = tagLayers.length - 1; i >= 0; i--) {
@@ -49,7 +49,7 @@
         return null;
     }
 
-    function removeTag(tag: Tag) {
+    function removeTag(tag: TagMeta) {
         candidateTags = candidateTags.filter((t) => t != tag);
     }
 
@@ -76,7 +76,7 @@
             const res = await fetch(
                 `${metahub_host}/api/tags/with-parent?category_id=${selectedCategoryId}`,
             );
-            const data: Tag[] = await res.json();
+            const data: TagMeta[] = await res.json();
             cacheCategoryTags.set(selectedCategoryId, data);
         }
         let data = cacheCategoryTags.get(selectedCategoryId);

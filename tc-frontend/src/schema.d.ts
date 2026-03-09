@@ -1,16 +1,13 @@
+import type { TagMeta } from "@mizip/metahub"
+
 export interface ItemMeta {
-    id: number
+    id: string | null
     title: string
     description: string
     update_time: Date
-    tags: Tag[]
+    tags: TagMeta[]
 }
 
 export interface ItemDetail extends ItemMeta{
 
-}
-
-export interface Tag {
-    id: number
-    name: string
 }
