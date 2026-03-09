@@ -156,7 +156,15 @@ async def get_node_detail(node_id: str, conn: Connection=Depends(get_db)):
 @router.post("/", response_model=NodeMeta)
 async def add_node_with_tags(node: NodeDetail, conn: Connection=Depends(get_db)):
     row = await conn.fetchrow("INSERT INTO nodes (title, description, backlink) VALUES ($1, $2, $3) RETURNING id, updated_at", node.title, node.description, node.backlink)
-    for tag in node.tags:
-        await conn.execute("INSERT INTO node_tags (node_id, tag_id) VALUES ($1, $2)", row['id'], tag.id)
+    if (not row):
+        return
+    for tag_id in node.tag_ids:
+        await conn.execute("INSERT INTO node_tags (node_id, tag_id) VALUES ($1, $2)", row['id'], tag_id)
 
-    return NodeMeta(id=str(row['id']), title=node.title, description=node.description, updated_at=row['updated_at'], tags=[])
+    return NodeMeta(
+        id=row['id'],
+        title=node.title,
+        description=node.description,
+        updated_at=row['updated_at'],
+        tag_ids=[],
+    )

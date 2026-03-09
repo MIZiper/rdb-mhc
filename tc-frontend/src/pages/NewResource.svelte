@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { TagsSelector, type Tag } from "@mizip/metahub";
+    import { TagsSelector, type TagMeta } from "@mizip/metahub";
     import {
         Button,
         Card,
@@ -13,13 +13,23 @@
         Label,
         Row,
     } from "@sveltestrap/sveltestrap";
-
-    let title: string = $state("");
-    let description: string = $state("");
-    let analysis_link: string = $state("");
-    let tags: Tag[] = $state([]);
-    function useTags(_tags: Tag[]) {
-        tags = _tags;
+    import type { ItemMeta } from "../schema";
+    
+    let item: ItemMeta = $state({
+        title: "",
+        description: "",
+        id: null,
+        update_time: new Date(),
+        tags: [],
+    });
+    let analysis_link = $state("");
+    let tagSelectorOpen: boolean  = $state(false);
+    
+    function useTags(_tags: TagMeta[]) {
+        if (item) {
+            item.tags = _tags;
+        }
+        tagSelectorOpen = false;
     }
 
     async function addResource() {
@@ -27,12 +37,13 @@
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                title,
-                description,
+                title: item.title,
+                description: item.description,
                 backlink: analysis_link,
-                tags: tags.map((e) => ({ id: e.id, name: e.name })),
+                tag_ids: item.tags.map((e) => (e.id)),
             }),
         });
+
         if (!res.ok) {
         }
     }
@@ -52,22 +63,23 @@
                 </CardHeader>
                 <CardBody>
                     <Label>Title</Label>
-                    <Input type="text" bind:value={title} />
+                    <Input type="text" bind:value={item.title} />
                     <Label>Description</Label>
-                    <Input type="textarea" bind:value={description} />
+                    <Input type="textarea" bind:value={item.description} />
                     <Label>Analysis</Label>
                     <Input
                         type="url"
                         placeholder="https://..."
                         bind:value={analysis_link}
                     />
-                    <Label>Tags</Label>
+                    
+                    <Button class="mt-4" onclick={()=>{tagSelectorOpen=true;}}>Edit Tags</Button>
                     <p>
                         <i>Tags:</i>
-                        <span>{tags.map((e) => e.name).join(", ")}</span>
+                        <span>{item.tags.map((e) => e.name).join(", ")}</span>
                         <br />
                         <i>TagsStr:</i>
-                        <span>{tags.map((e) => e.id).join(";")}</span>
+                        <span>{item.tags.map((e) => e.id).join(";")}</span>
                     </p>
                 </CardBody>
                 <CardFooter>
@@ -80,4 +92,4 @@
     </Row>
 </Container>
 
-<TagsSelector isOpen={true} onSelect={useTags} />
+<TagsSelector isOpen={tagSelectorOpen} onSelect={useTags} />
