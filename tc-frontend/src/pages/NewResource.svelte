@@ -14,7 +14,7 @@
         Row,
     } from "@sveltestrap/sveltestrap";
     import type { ItemMeta } from "../schema";
-    
+
     let item: ItemMeta = $state({
         title: "",
         description: "",
@@ -22,9 +22,8 @@
         update_time: new Date(),
         tags: [],
     });
-    let analysis_link = $state("");
-    let tagSelectorOpen: boolean  = $state(false);
-    
+    let tagSelectorOpen: boolean = $state(false);
+
     function useTags(_tags: TagMeta[]) {
         if (item) {
             item.tags = _tags;
@@ -39,8 +38,7 @@
             body: JSON.stringify({
                 title: item.title,
                 description: item.description,
-                backlink: analysis_link,
-                tag_ids: item.tags.map((e) => (e.id)),
+                tag_ids: item.tags.map((e) => e.id),
             }),
         });
 
@@ -66,14 +64,13 @@
                     <Input type="text" bind:value={item.title} />
                     <Label>Description</Label>
                     <Input type="textarea" bind:value={item.description} />
-                    <Label>Analysis</Label>
-                    <Input
-                        type="url"
-                        placeholder="https://..."
-                        bind:value={analysis_link}
-                    />
-                    
-                    <Button class="mt-4" onclick={()=>{tagSelectorOpen=true;}}>Edit Tags</Button>
+
+                    <Button
+                        class="mt-4"
+                        onclick={() => {
+                            tagSelectorOpen = true;
+                        }}>Edit Tags</Button
+                    >
                     <p>
                         <i>Tags:</i>
                         <span>{item.tags.map((e) => e.name).join(", ")}</span>
@@ -92,4 +89,10 @@
     </Row>
 </Container>
 
-<TagsSelector isOpen={tagSelectorOpen} onSelect={useTags} />
+<TagsSelector
+    isOpen={tagSelectorOpen}
+    onSelect={useTags}
+    onCancel={() => {
+        tagSelectorOpen = false;
+    }}
+/>

@@ -1,4 +1,4 @@
-import type { Tag } from "../schema";
+import type { TagMeta } from "../schema";
 
 export async function fetch_tags_info(
     mh_host: string = "",
@@ -16,7 +16,7 @@ export async function fetch_tags_info(
     return Object.fromEntries(data.map((itm) => [itm.id, itm]));
 }
 
-export function construct_tags_by_ids(tag_ids: number[], tags_cache: Record<number, Record<string, any>>): Tag[] {
+export function construct_tags_by_ids(tag_ids: number[], tags_cache: Record<number, Record<string, any>>): TagMeta[] {
     return tag_ids.map((e) => ({
         id: e,
         name: tags_cache[e].name,

@@ -17,7 +17,7 @@ class NodeMeta(BaseModel):
 class NodeDetail(NodeMeta):
     id: Optional[UUID] = None
     updated_at: Optional[datetime] = None
-    backlink: str
+    backlink: Optional[str] = None
     frozenlink: Optional[str] = None
 
 class NodeResponse(BaseModel):

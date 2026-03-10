@@ -97,10 +97,6 @@
     });
 </script>
 
-<svelte:head>
-    <title>RDB (page: {currentPage}, q: {qSearch})</title>
-</svelte:head>
-
 <Container class="my-2" fluid>
     <Row>
         <Col>

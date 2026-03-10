@@ -19,9 +19,14 @@
     }
 
     let {
-        onSelect,
+        onSelect = null,
+        onCancel = null,
         isOpen = true,
-    }: { onSelect: (tags: TagMeta[]) => void; isOpen: boolean } = $props();
+    }: {
+        onSelect: ((tags: TagMeta[]) => void) | null;
+        isOpen: boolean;
+        onCancel: (() => void) | null;
+    } = $props();
 
     let categories: Category[] = $state([]);
     let tagLayers: Layer[] = $state([]);
@@ -53,12 +58,11 @@
         candidateTags = candidateTags.filter((t) => t != tag);
     }
 
-    function submitTags() {
-        onSelect(candidateTags);
-    }
-
     function addTag() {
-        if (currentTag !== null && !candidateTags.some((t) => currentTag?.id === t.id))
+        if (
+            currentTag !== null &&
+            !candidateTags.some((t) => currentTag?.id === t.id)
+        )
             candidateTags.push(currentTag);
     }
 
@@ -118,7 +122,9 @@
     <ModalBody>
         <div class="mb-2">
             {#each candidateTags as tag}
-                <Badge class="me-1" ondblclick={() => removeTag(tag)}>{tag.name}</Badge>
+                <Badge class="me-1" ondblclick={() => removeTag(tag)}
+                    >{tag.name}</Badge
+                >
             {/each}
         </div>
         <FormGroup>
@@ -165,9 +171,16 @@
             <Button
                 color="primary"
                 disabled={candidateTags.length === 0}
-                onclick={submitTags}>Submit</Button
+                onclick={() => {
+                    if (onSelect) onSelect(candidateTags);
+                }}>Submit</Button
             >
-            <Button color="secondary">Cancel</Button>
+            <Button
+                color="secondary"
+                onclick={() => {
+                    if (onCancel) onCancel();
+                }}>Cancel</Button
+            >
         </ButtonGroup>
     </ModalFooter>
 </Modal>

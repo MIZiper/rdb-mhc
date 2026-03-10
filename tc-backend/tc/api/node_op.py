@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Query, Body
 from typing import Optional
+from uuid import UUID
 from asyncpg.connection import Connection
 from tc.db.connection import get_db
 from tc.models import NodeMeta, NodeDetail, NodeResponse
@@ -9,7 +10,7 @@ router = APIRouter(prefix="/nodes")
 @router.get("/", response_model=NodeResponse)
 async def list_nodes(
     conn: Connection = Depends(get_db),
-    page: Optional[int]=Query(1, ge=1),
+    page: int=Query(1, ge=1),
     page_size: int = Query(10, le=100),
     q: Optional[str] = Query(None, description="Search by content"),
 ):
@@ -78,7 +79,7 @@ async def list_nodes(
 
     result_map = {
         r["id"]: NodeMeta(
-            id=str(r['id']),
+            id=r['id'],
             title=r['title'],
             description=r['description'],
             updated_at=r['updated_at'],
@@ -140,7 +141,7 @@ async def search_nodes_by_tags(
 
     return NodeResponse(
         items=[NodeMeta(
-            id=str(r['id']),
+            id=r['id'],
             title=r['title'],
             description=r['description'],
             updated_at=r['updated_at'],
@@ -155,7 +156,7 @@ async def get_node_detail(node_id: str, conn: Connection=Depends(get_db)):
 
 @router.post("/", response_model=NodeMeta)
 async def add_node_with_tags(node: NodeDetail, conn: Connection=Depends(get_db)):
-    row = await conn.fetchrow("INSERT INTO nodes (title, description, backlink) VALUES ($1, $2, $3) RETURNING id, updated_at", node.title, node.description, node.backlink)
+    row = await conn.fetchrow("INSERT INTO nodes (title, description) VALUES ($1, $2) RETURNING id, updated_at", node.title, node.description)
     if (not row):
         return
     for tag_id in node.tag_ids:
@@ -166,5 +167,5 @@ async def add_node_with_tags(node: NodeDetail, conn: Connection=Depends(get_db))
         title=node.title,
         description=node.description,
         updated_at=row['updated_at'],
-        tag_ids=[],
+        tag_ids=node.tag_ids,
     )
