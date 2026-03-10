@@ -24,7 +24,10 @@ async def list_nodes(
 
     if q and q.strip():
         # --- 搜索模式 ---
-        # 使用 plainto_tsquery 防止用户输入语法错误导致报错
+        # xx_tsquery:
+        #   - to_tsquery, most flexible but cannot 'a b'
+        #   - plainto_tsquery, convert 'a b' to 'a & b', but 'a | b' also to 'a & b'
+        #   - websearch_to_tsquery, 'a b' to 'a & b', 'a or b' to 'a | b', but no 'a:*'
         # 按相关性排序
         sql = """
             SELECT
@@ -34,7 +37,7 @@ async def list_nodes(
                 updated_at,
                 ts_headline('english', title, query, 'StartSel=<strong>, StopSel=</strong>') as title_highlight,
                 ts_rank(search_vector, query) as relevance
-            FROM nodes, plainto_tsquery('english', $1) as query
+            FROM nodes, to_tsquery('english', $1) as query
             WHERE search_vector @@ query
             ORDER BY relevance DESC
             LIMIT $2 OFFSET $3
@@ -42,7 +45,7 @@ async def list_nodes(
         params = (q, page_size, offset)
 
         count_sql = """
-            SELECT COUNT(*) FROM nodes, plainto_tsquery('english', $1) as query
+            SELECT COUNT(*) FROM nodes, to_tsquery('english', $1) as query
             WHERE search_vector @@ query
         """
         count_result = await conn.fetchval(count_sql, q)

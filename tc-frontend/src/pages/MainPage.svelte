@@ -4,12 +4,14 @@
         ButtonGroup,
         Col,
         Container,
+        Icon,
         Input,
         ListGroup,
         Pagination,
         PaginationItem,
         PaginationLink,
         Row,
+        Tooltip,
     } from "@sveltestrap/sveltestrap";
     import ResourceItem from "../lib/ResourceItem.svelte";
     import type { ItemMeta, Tag } from "../schema";
@@ -85,6 +87,30 @@
         }
     }
 
+    function preprocessTsQuery(input: string): string {
+        // 1. 去除首尾空格
+        const trimmed = input.trim();
+
+        if (!trimmed) return "";
+
+        // 2. 检查是否包含 Postgres tsquery 的逻辑运算符
+        // 这里涵盖了：与 (&), 或 (|), 非 (!), 以及位移/短语操作符 (<->)
+        const hasOperators = /[&|!<->]/.test(trimmed);
+
+        if (hasOperators) {
+            // 如果已有运算符，我们保持原样，仅返回 trim 后的结果
+            return trimmed;
+        } else {
+            // 3. 如果只是普通的词组（由空格分隔）
+            // 将连续的空格替换为 & 符号
+            // 例如: "apple banana cherry" -> "apple & banana & cherry"
+            return trimmed
+                .split(/\s+/) // 按一个或多个空格分割
+                .filter(Boolean) // 过滤掉可能的空字符串
+                .join(" & "); // 用 & 连接
+        }
+    }
+
     $effect(() => {
         const q = searchParams.get("q") || "";
         const page = parseInt(searchParams.get("page") || "1", 10);
@@ -107,16 +133,22 @@
                 onkeypress={(e) => {
                     if (e.key == "Enter")
                         router.navigate("/", {
-                            search: { q: searchBind.trim() },
+                            search: { q: preprocessTsQuery(searchBind) },
                         });
                 }}
             />
         </Col>
         <Col xs="auto">
+            <Tooltip target="tsquery-info">
+                Use 'abc', 'abc & def', 'abc | def', 'abc & !def', 'abc:*' ...
+                for the query.
+            </Tooltip>
+            <Icon name="info" id="tsquery-info" />
             <Button
                 onclick={() =>
-                    router.navigate("/", { search: { q: searchBind.trim() } })}
-                >Search</Button
+                    router.navigate("/", {
+                        search: { q: preprocessTsQuery(searchBind) },
+                    })}>Search</Button
             >
         </Col>
     </Row>
