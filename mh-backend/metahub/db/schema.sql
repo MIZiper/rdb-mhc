@@ -102,7 +102,9 @@ $$;
 CREATE TABLE IF NOT EXISTS registered_nodes (
     tag_id INTEGER NOT NULL,
     client_id INTEGER NOT NULL,
-    client_node_id INTEGER NOT NULL,
+    client_node_id UUID NOT NULL,
+    node_tag_ids INTEGER[],
     params JSONB NOT NULL DEFAULT '{}',
-    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE,
+    FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
 );

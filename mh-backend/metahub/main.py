@@ -7,7 +7,6 @@ from metahub.api.clients import router as client_router
 
 
 async def lifespan(app: FastAPI):
-    # podman run -it --rm -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=metahub -v $(pwd)/metahub/db/:/docker-entrypoint-initdb.d/ -p 5432:5432 postgres
     await init_pool()
     yield
     await close_pool()

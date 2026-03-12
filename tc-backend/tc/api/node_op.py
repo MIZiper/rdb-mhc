@@ -153,9 +153,13 @@ async def search_nodes_by_tags(
         total=len(rows)
     )
 
-@router.get("/{node_id}")
-async def get_node_detail(node_id: str, conn: Connection=Depends(get_db)):
-    row = await conn.fetchrow("")
+@router.get("/{node_id}/meta", response_model=NodeMeta)
+async def get_node_meta(node_id: UUID, conn: Connection=Depends(get_db)):
+    row = await conn.fetchrow("SELECT id, title, description, updated_at FROM nodes WHERE id=$1;", node_id)
+    if row is None:
+        raise Exception("Node not found")
+    return NodeMeta(tag_ids=[], **row)
+
 
 @router.post("/", response_model=NodeMeta)
 async def add_node_with_tags(node: NodeDetail, conn: Connection=Depends(get_db)):
