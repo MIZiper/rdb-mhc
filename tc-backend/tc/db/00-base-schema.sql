@@ -1,3 +1,6 @@
+-- The base node/tags database
+-- Can be used by non-RDB but MetaHub applications
+
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -10,13 +13,9 @@ CREATE TABLE IF NOT EXISTS nodes (
     id UUID PRIMARY KEY DEFAULT uuidv7(), -- Require PostgreSQL 18+, for native uuid v7 support
     title VARCHAR(100) NOT NULL,
     description TEXT,
-    backlink VARCHAR(255), -- link to analysis
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    creator_signature VARCHAR(20),
-    validate_key VARCHAR(20) DEFAULT NULL,
-    frozen BOOLEAN NOT NULL DEFAULT FALSE,
-    frozenlink VARCHAR(255), -- link to release document
+    creator_signature VARCHAR(20), -- can be hash of creator_signature
     valid BOOLEAN NOT NULL DEFAULT TRUE
 );
 CREATE TRIGGER node_updated_at_trigger
