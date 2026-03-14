@@ -1,4 +1,4 @@
-import type { TagMeta } from "@mizip/metahub"
+export type { TagMeta } from "@mizip/metahub"
 
 export interface ItemMeta {
     id: string | null

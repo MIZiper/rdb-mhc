@@ -14,7 +14,7 @@
         Tooltip,
     } from "@sveltestrap/sveltestrap";
     import ResourceItem from "../lib/ResourceItem.svelte";
-    import type { ItemMeta, Tag } from "../schema";
+    import type { ItemMeta } from "../schema";
     import { getContext, onMount } from "svelte";
     import { fetch_tags_info, construct_tags_by_ids } from "./FetchMetaHubTags";
     import { searchParams } from "sv-router";
