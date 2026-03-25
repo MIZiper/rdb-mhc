@@ -20,17 +20,17 @@
 <Styles />
 
 <main>
-  <Navbar style="background-color:whitesmoke;">
-    <NavbarBrand>
+  <Navbar style="background-color:#49a9a7;">
+    <NavbarBrand style="color: white;">
       <img src="/tc-logo.png" alt="TC logo" height="36px" />
       Resource database
     </NavbarBrand>
     <Nav>
       <NavItem>
-        <NavLink href="/new">New</NavLink>
+        <NavLink style="color: white;" href="/new">New</NavLink>
       </NavItem>
       <NavItem>
-        <NavLink href="/dev-test">Test</NavLink>
+        <NavLink style="color: white;" href="/dev-test">Test</NavLink>
       </NavItem>
     </Nav>
   </Navbar>
