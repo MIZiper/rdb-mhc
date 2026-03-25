@@ -36,6 +36,7 @@
             description: e.description,
             update_time: new Date(e.updated_at),
             tags: construct_tags_by_ids(e.tag_ids, tags_cache),
+            data_type: e.data_type,
         }));
         totalItems = data.total || 0;
 

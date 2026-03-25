@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, Body
+from fastapi import APIRouter, Depends, Query, Body, HTTPException
 from typing import Optional
 from uuid import UUID
 from asyncpg.connection import Connection
@@ -10,17 +10,11 @@ router = APIRouter(prefix="/nodes")
 @router.get("/", response_model=NodeResponse)
 async def list_nodes(
     conn: Connection = Depends(get_db),
-    page: int=Query(1, ge=1),
+    page: int = Query(1, ge=1),
     page_size: int = Query(10, le=100),
     q: Optional[str] = Query(None, description="Search by content"),
 ):
-    """
-        /nodes/
-        /nodes/?page=1
-        /nodes/?q=search&page=1
-    """
-
-    offset = (page-1) * page_size
+    offset = (page - 1) * page_size
 
     if q and q.strip():
         # --- 搜索模式 ---
@@ -35,9 +29,10 @@ async def list_nodes(
                 title,
                 description,
                 updated_at,
+                to_jsonb(n) ->> 'content_type' AS content_type,
                 ts_headline('english', title, query, 'StartSel=<strong>, StopSel=</strong>') as title_highlight,
                 ts_rank(search_vector, query) as relevance
-            FROM nodes, to_tsquery('english', $1) as query
+            FROM nodes n, to_tsquery('english', $1) as query
             WHERE search_vector @@ query
             ORDER BY relevance DESC
             LIMIT $2 OFFSET $3
@@ -49,7 +44,7 @@ async def list_nodes(
             WHERE search_vector @@ query
         """
         count_result = await conn.fetchval(count_sql, q)
-    
+
     else:
         # --- 默认浏览模式 ---
         # 按时间倒序排序，不需要计算 ts_rank 和 headline，性能更高
@@ -59,9 +54,10 @@ async def list_nodes(
                 title,
                 description,
                 updated_at,
+                to_jsonb(n) ->> 'content_type' AS content_type,
                 NULL as title_highlight,
                 NULL as relevance
-            FROM nodes
+            FROM nodes n
             ORDER BY updated_at DESC
             LIMIT $1 OFFSET $2
         """
@@ -82,30 +78,34 @@ async def list_nodes(
 
     result_map = {
         r["id"]: NodeMeta(
-            id=r['id'],
-            title=r['title'],
-            description=r['description'],
-            updated_at=r['updated_at'],
+            id=r["id"],
+            title=r["title"],
+            description=r["description"],
+            updated_at=r["updated_at"],
             tag_ids=[],
-        ) for r in nodes_rows
+            data_type=r["content_type"],
+        )
+        for r in nodes_rows
     }
-    
+
     for tag_row in tags_rows:
         nid = tag_row["node_id"]
         if nid in result_map:
             result_map[nid].tag_ids.append(tag_row["tag_id"])
 
-    return NodeResponse(
-        items =  [result_map[nid] for nid in node_ids],
-        total=count_result
-    )
+    return NodeResponse(items=[result_map[nid] for nid in node_ids], total=count_result)
+
 
 @router.post("/by_tags")
 async def search_nodes_by_tags(
     conn: Connection = Depends(get_db),
-    tag_ids: list[int]=Body(..., description="Search by tags"),
-    limit: Optional[int]=Query(None, ge=1, le=100, description="Limits of results returned"),
-    mode: Optional[str]=Query("exact", description="Tag search mode: exact | ancestors | expanded"),
+    tag_ids: list[int] = Body(..., description="Search by tags"),
+    limit: Optional[int] = Query(
+        None, ge=1, le=100, description="Limits of results returned"
+    ),
+    mode: Optional[str] = Query(
+        "exact", description="Tag search mode: exact | ancestors | expanded"
+    ),
 ):
     if not tag_ids:
         return []
@@ -122,6 +122,7 @@ async def search_nodes_by_tags(
             n.title,
             n.description,
             n.updated_at,
+            to_jsonb(n) ->> 'content_type' AS content_type,
             COUNT(nt.tag_id) AS match_count,
             (
                 SELECT array_agg(t2.tag_id)
@@ -136,43 +137,65 @@ async def search_nodes_by_tags(
         ${limit_clause}
     """
 
-    # 动态添加 LIMIT 子句 (防止 SQL 注入，这里只是字符串拼接子句，参数还是用 $2)
     final_query = query.replace("${limit_clause}", "LIMIT $2" if limit else "")
     args = [tag_ids, limit] if limit else [tag_ids]
 
     rows = await conn.fetch(final_query, *args)
 
     return NodeResponse(
-        items=[NodeMeta(
-            id=r['id'],
-            title=r['title'],
-            description=r['description'],
-            updated_at=r['updated_at'],
-            tag_ids=r['tag_ids'],
-        ) for r in rows],
-        total=len(rows)
+        items=[
+            NodeMeta(
+                id=r["id"],
+                title=r["title"],
+                description=r["description"],
+                updated_at=r["updated_at"],
+                tag_ids=r["tag_ids"],
+                data_type=r["content_type"],
+            )
+            for r in rows
+        ],
+        total=len(rows),
     )
 
+
 @router.get("/{node_id}/meta", response_model=NodeMeta)
-async def get_node_meta(node_id: UUID, conn: Connection=Depends(get_db)):
-    row = await conn.fetchrow("SELECT id, title, description, updated_at FROM nodes WHERE id=$1;", node_id)
+async def get_node_meta(node_id: UUID, conn: Connection = Depends(get_db)):
+    row = await conn.fetchrow(
+        "SELECT id, title, description, updated_at FROM nodes WHERE id=$1;",
+        node_id,
+    )
     if row is None:
-        raise Exception("Node not found")
-    return NodeMeta(tag_ids=[], **row)
+        raise HTTPException(status_code=404, detail="Node not found")
+    return NodeMeta(
+        id=row["id"],
+        tag_ids=[],
+        title=row["title"],
+        description=row["description"],
+        updated_at=row["updated_at"],
+        data_type=None,
+    )
 
 
 @router.post("/", response_model=NodeMeta)
-async def add_node_with_tags(node: NodeDetail, conn: Connection=Depends(get_db)):
-    row = await conn.fetchrow("INSERT INTO nodes (title, description) VALUES ($1, $2) RETURNING id, updated_at", node.title, node.description)
-    if (not row):
-        return
+async def add_node_with_tags(node: NodeMeta, conn: Connection = Depends(get_db)):
+    row = await conn.fetchrow(
+        "INSERT INTO nodes (title, description) VALUES ($1, $2) RETURNING id, updated_at",
+        node.title,
+        node.description,
+    )
+    if not row:
+        raise HTTPException(status_code=500, detail="Failed to create node")
+
     for tag_id in node.tag_ids:
-        await conn.execute("INSERT INTO node_tags (node_id, tag_id) VALUES ($1, $2)", row['id'], tag_id)
+        await conn.execute(
+            "INSERT INTO node_tags (node_id, tag_id) VALUES ($1, $2)", row["id"], tag_id
+        )
 
     return NodeMeta(
-        id=row['id'],
+        id=row["id"],
         title=node.title,
         description=node.description,
-        updated_at=row['updated_at'],
+        updated_at=row["updated_at"],
         tag_ids=node.tag_ids,
+        data_type=None,
     )

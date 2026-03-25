@@ -1,6 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Literal, Any
 from uuid import UUID
 
 class TagMeta(BaseModel):
@@ -13,6 +13,9 @@ class NodeMeta(BaseModel):
     description: str
     updated_at: datetime
     tag_ids: list[int]
+    data_type: Optional[str] = Field(
+        None, description="Type of data stored (table, image, generic)"
+    )
 
 class NodeDetail(NodeMeta):
     id: Optional[UUID] = None

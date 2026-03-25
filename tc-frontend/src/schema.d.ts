@@ -6,6 +6,7 @@ export interface ItemMeta {
     description: string
     update_time: Date
     tags: TagMeta[]
+    data_type: string = null
 }
 
 export interface ItemDetail extends ItemMeta{
