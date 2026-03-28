@@ -1,13 +1,19 @@
+"""Nodes Operation
+
+In this handler, it provides basic operations on nodes.
+The nodes are data irrelevant, meaning client can have its own data structure.
+"""
+
 from fastapi import APIRouter, Depends, Query, Body, HTTPException
 from typing import Optional
 from uuid import UUID
 from asyncpg.connection import Connection
 from tc.db.connection import get_db
-from tc.models import NodeMeta, NodeDetail, NodeResponse
+from tc.models import NodeMetaRead, NodeMetaList, NodeCreate
 
 router = APIRouter(prefix="/nodes")
 
-@router.get("/", response_model=NodeResponse)
+@router.get("/", response_model=NodeMetaList)
 async def list_nodes(
     conn: Connection = Depends(get_db),
     page: int = Query(1, ge=1),
@@ -77,7 +83,7 @@ async def list_nodes(
     tags_rows = await conn.fetch(tags_query, node_ids)
 
     result_map = {
-        r["id"]: NodeMeta(
+        r["id"]: NodeMetaRead(
             id=r["id"],
             title=r["title"],
             description=r["description"],
@@ -93,10 +99,10 @@ async def list_nodes(
         if nid in result_map:
             result_map[nid].tag_ids.append(tag_row["tag_id"])
 
-    return NodeResponse(items=[result_map[nid] for nid in node_ids], total=count_result)
+    return NodeMetaList(items=[result_map[nid] for nid in node_ids], total=count_result)
 
 
-@router.post("/by_tags")
+@router.post("/by_tags", response_model=NodeMetaList)
 async def search_nodes_by_tags(
     conn: Connection = Depends(get_db),
     tag_ids: list[int] = Body(..., description="Search by tags"),
@@ -142,9 +148,9 @@ async def search_nodes_by_tags(
 
     rows = await conn.fetch(final_query, *args)
 
-    return NodeResponse(
+    return NodeMetaList(
         items=[
-            NodeMeta(
+            NodeMetaRead(
                 id=r["id"],
                 title=r["title"],
                 description=r["description"],
@@ -158,7 +164,7 @@ async def search_nodes_by_tags(
     )
 
 
-@router.get("/{node_id}/meta", response_model=NodeMeta)
+@router.get("/{node_id}/meta", response_model=NodeMetaRead)
 async def get_node_meta(node_id: UUID, conn: Connection = Depends(get_db)):
     row = await conn.fetchrow(
         "SELECT id, title, description, updated_at FROM nodes WHERE id=$1;",
@@ -166,7 +172,7 @@ async def get_node_meta(node_id: UUID, conn: Connection = Depends(get_db)):
     )
     if row is None:
         raise HTTPException(status_code=404, detail="Node not found")
-    return NodeMeta(
+    return NodeMetaRead(
         id=row["id"],
         tag_ids=[],
         title=row["title"],
@@ -176,8 +182,8 @@ async def get_node_meta(node_id: UUID, conn: Connection = Depends(get_db)):
     )
 
 
-@router.post("/", response_model=NodeMeta)
-async def add_node_with_tags(node: NodeMeta, conn: Connection = Depends(get_db)):
+@router.post("/", response_model=NodeMetaRead)
+async def add_node_with_tags(node: NodeCreate, conn: Connection = Depends(get_db)):
     row = await conn.fetchrow(
         "INSERT INTO nodes (title, description) VALUES ($1, $2) RETURNING id, updated_at",
         node.title,
@@ -191,7 +197,7 @@ async def add_node_with_tags(node: NodeMeta, conn: Connection = Depends(get_db))
             "INSERT INTO node_tags (node_id, tag_id) VALUES ($1, $2)", row["id"], tag_id
         )
 
-    return NodeMeta(
+    return NodeMetaRead(
         id=row["id"],
         title=node.title,
         description=node.description,
