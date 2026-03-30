@@ -69,7 +69,7 @@ async def list_nodes_by_type(
 @router.get("/{node_id}/data", response_model=NodeDataRead)
 async def get_node_data(node_id: UUID, conn: Connection = Depends(get_db)):
     row = await conn.fetchrow(
-        "SELECT id, content, content_type, updated_at FROM nodes WHERE id=$1", node_id
+        "SELECT id, title, description, content, content_type, updated_at FROM nodes WHERE id=$1", node_id
     )
     if row is None:
         raise HTTPException(status_code=404, detail="Node not found")
@@ -77,12 +77,17 @@ async def get_node_data(node_id: UUID, conn: Connection = Depends(get_db)):
     content = row["content"]
     if content is None or content == {}:
         raise HTTPException(status_code=404, detail="Node has no data")
+    tags_rows = await conn.fetch("SELECT tag_id FROM node_tags WHERE node_id=$1", node_id)
+    tag_ids = [r["tag_id"] for r in tags_rows]
 
     return NodeDataRead(
         id=row["id"],
+        title=row["title"],
+        description=row["description"],
         content=content,
         data_type=row["content_type"],
         updated_at=row["updated_at"],
+        tag_ids=tag_ids,
     )
 
 
@@ -93,7 +98,7 @@ async def patch_node_data(
     conn: Connection = Depends(get_db),
 ):
     row = await conn.fetchrow(
-        "SELECT id, content, content_type, updated_at FROM nodes WHERE id=$1", node_id
+        "SELECT id, title, description, content, content_type, updated_at FROM nodes WHERE id=$1", node_id
     )
     if row is None:
         raise HTTPException(status_code=404, detail="Node not found")
@@ -124,17 +129,22 @@ async def patch_node_data(
 
     content_dict = validated_data.model_dump()
     updated_row = await conn.fetchrow(
-        "UPDATE nodes SET content=$1, content_type=$2, updated_at=NOW() WHERE id=$3 RETURNING updated_at",
+        "UPDATE nodes SET content=$1, content_type=$2, updated_at=NOW() WHERE id=$3 RETURNING updated_at, title, description",
         content_dict,
         validated_data.type,
         node_id,
     )
+    tags_rows = await conn.fetch("SELECT tag_id FROM node_tags WHERE node_id=$1", node_id)
+    tag_ids = [r["tag_id"] for r in tags_rows]
 
     return NodeDataRead(
         id=node_id,
+        title=updated_row["title"],
+        description=updated_row["description"],
         content=validated_data,
         data_type=validated_data.type,
         updated_at=updated_row["updated_at"],
+        tag_ids=tag_ids,
     )
 
 
@@ -148,15 +158,20 @@ async def ingest_node_data(
 
     content_dict = payload.content.model_dump()
     row = await conn.fetchrow(
-        "UPDATE nodes SET content=$1, content_type=$2, updated_at=NOW() WHERE id=$3 RETURNING updated_at",
+        "UPDATE nodes SET content=$1, content_type=$2, updated_at=NOW() WHERE id=$3 RETURNING updated_at, title, description",
         content_dict,
         payload.content.type,
         node_id,
     )
+    tags_rows = await conn.fetch("SELECT tag_id FROM node_tags WHERE node_id=$1", node_id)
+    tag_ids = [r["tag_id"] for r in tags_rows]
 
     return NodeDataRead(
         id=node_id,
+        title=row["title"],
+        description=row["description"],
         content=payload.content,
         data_type=payload.content.type,
         updated_at=row["updated_at"],
+        tag_ids=tag_ids,
     )

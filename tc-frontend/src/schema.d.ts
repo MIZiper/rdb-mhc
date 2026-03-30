@@ -10,5 +10,5 @@ export interface ItemMeta {
 }
 
 export interface ItemDetail extends ItemMeta{
-
+    content: any
 }

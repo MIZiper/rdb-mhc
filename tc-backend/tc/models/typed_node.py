@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, RootModel
 from datetime import datetime
 from typing import Optional, Literal, Any
 from uuid import UUID
@@ -23,8 +23,18 @@ class GenericData(BaseModel):
     type: Literal["generic"] = "generic"
     content: dict[str, Any] = Field(..., description="Generic JSON content")
 
+class AnyData(RootModel[Any]):
+    """Accept any JSON-serializable value without wrapper fields.
 
-NodeData = TableData | ImageData | GenericData
+    This model stores the raw JSON value directly as the root, so inputs
+    like 42, "string", [1,2], or {"a":1} are all valid and preserved
+    as-is.
+    """
+
+    root: Any
+
+
+NodeData = TableData | ImageData | GenericData | AnyData
 
 
 
@@ -44,6 +54,9 @@ class NodeDataPayload(BaseModel):
 
 class NodeDataRead(BaseModel):
     id: UUID
-    content: NodeData
-    data_type: str
+    title: str
+    description: str
     updated_at: datetime
+    content: NodeData
+    data_type: str | None
+    tag_ids: list[int] = Field(default_factory=list)
