@@ -64,7 +64,7 @@
                 item.data_type,
             )}; color:{barTextColor};"
         >
-            <span class="type-text">{item.data_type}</span>
+            <a class="type-text" href="/type/{encodeURI(item.data_type)}">{item.data_type}</a>
         </div>
     {/if}
 </Card>
@@ -88,6 +88,8 @@
         font-weight: 600;
         font-size: 12px;
         white-space: nowrap;
+        color: white;
+        text-decoration: none;
     }
 
     p.update_date {
