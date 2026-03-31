@@ -64,7 +64,7 @@
                 item.data_type,
             )}; color:{barTextColor};"
         >
-            <a class="type-text" href="/type/{encodeURI(item.data_type)}">{item.data_type}</a>
+            <a class="type-text" href="/types/{encodeURI(item.data_type)}">{item.data_type}</a>
         </div>
     {/if}
 </Card>

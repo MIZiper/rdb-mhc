@@ -13,8 +13,16 @@
   import { getConfig } from "./utils/GetRuntimeEnv.js";
   import { router } from "./router";
 
+  import { BaseProcessor, registry } from "./lib/processor.js";
+  import BaseViewer from "./modules/BaseViewer.svelte";
+  import BaseEditor from "./modules/BaseEditor.svelte";
+
   setContext("mh_host", getConfig("MH_HOST"));
   setContext("router", router);
+
+  registry.register(
+    new BaseProcessor("base-v01", "Base Item", BaseViewer, BaseEditor),
+  );
 </script>
 
 <Styles />
