@@ -51,6 +51,7 @@
             >
                 {tag.name}
                 <a
+                    class="metahub-reg"
                     href={`${metahub_host}/registered/${tag.id}/${encodeURI(tag.name)}`}
                     >🔗</a
                 >
@@ -64,12 +65,18 @@
                 item.data_type,
             )}; color:{barTextColor};"
         >
-            <a class="type-text" href="/types/{encodeURI(item.data_type)}">{item.data_type}</a>
+            <a class="type-text" href="/types/{encodeURI(item.data_type)}"
+                >{item.data_type}</a
+            >
         </div>
     {/if}
 </Card>
 
 <style>
+    a.metahub-reg {
+        text-decoration: none;
+    }
+
     .type-bar {
         display: flex;
         align-items: center;

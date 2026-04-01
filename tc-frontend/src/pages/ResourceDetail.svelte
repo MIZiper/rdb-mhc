@@ -15,12 +15,13 @@
     import type { ItemDetail } from "../schema";
     import { getContext, onMount, type Component } from "svelte";
     import { construct_tags_by_ids, fetch_tags_info } from "./FetchMetaHubTags";
+    import { registry, type BaseProcessor } from "../lib/processor";
 
     let router: any = getContext("router");
     let item_id = router.route.getParams("/items/:id").id;
     let item: ItemDetail | null = $state(null);
     let metahub_host = (getContext("mh_host") as string) || "";
-    let Viewer: Component | null = $state(null);
+    let processor: BaseProcessor | null = $state(null);
 
     onMount(async () => {
         const res = await fetch(`/api/nodes/${item_id}/data`);
@@ -37,17 +38,8 @@
             data_type: data.data_type,
             content: data.content,
         };
-        // Attempt to load a registered viewer for the data_type (if any)
-        if (item.data_type) {
-            try {
-                const mod = await import(`../modules/types/${item.data_type}.svelte`);
-                Viewer = mod.default;
-            } catch (e) {
-                Viewer = null;
-            }
-        } else {
-            Viewer = null;
-        }
+
+        processor = registry.getProcessor(item.data_type);
     });
 </script>
 
@@ -55,28 +47,23 @@
     <Row>
         <Col>
             {#if item}
-                {#if !item.data_type}
+                {#if !processor}
+                    <p>Registered type: [{item.data_type}] (no viewer found)</p>
                     <pre>{JSON.stringify(item.content, null, 2)}</pre>
                 {:else}
-                    {#if Viewer}
-                        <Viewer content={item.content} />
-                    {:else}
-                        <p>Registered type: {item.data_type} (no viewer found)</p>
-                        <pre>{JSON.stringify(item.content, null, 2)}</pre>
-                    {/if}
+                    <processor.viewer content={item.content} />
                 {/if}
             {:else}
                 <p>Loading...</p>
             {/if}
         </Col>
-        <Col>
+        <Col xs="4">
             {#if item}
                 <Card>
-                    <CardHeader>
-                        <CardTitle>{item.title}</CardTitle>
-                    </CardHeader>
+                    <CardHeader></CardHeader>
                     <CardBody>
-                        <CardSubtitle>{item.description}</CardSubtitle>
+                        <CardSubtitle>{item.title}</CardSubtitle>
+                        {item.description}
                     </CardBody>
                     <CardFooter>
                         {#each item.tags as tag}
