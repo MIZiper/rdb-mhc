@@ -51,7 +51,7 @@
     });
 </script>
 
-<Container fluid>
+<Container class="my-2" fluid>
     <Row>
         <Col>
             {#if item}

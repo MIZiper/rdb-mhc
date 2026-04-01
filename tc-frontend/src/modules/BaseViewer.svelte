@@ -2,10 +2,10 @@
     let { data = {} }: { data?: Record<string, any> } = $props();
 </script>
 
-<main>
-    <label>Data (read-only)</label>
+<div id="main">
+    <span>Data (read-only)</span>
     <pre>{JSON.stringify(data, null, 2)}</pre>
-</main>
+</div>
 
 <style>
     pre {
@@ -14,7 +14,7 @@
         border-radius: 4px;
         overflow: auto;
     }
-    main {
+    #main {
         display: flex;
         flex-direction: column;
         gap: 8px;

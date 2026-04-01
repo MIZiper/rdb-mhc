@@ -32,9 +32,9 @@
     }
 </script>
 
-<main>
-    <label>Data (JSON)</label>
-    <textarea bind:value={jsonText} rows="12" />
+<div id="main">
+    <span>Data (JSON)</span>
+    <textarea bind:value={jsonText} rows="12"></textarea>
 
     {#if error}
         <div class="error">{error}</div>
@@ -44,10 +44,10 @@
         <button onclick={onSave}>Save</button>
         <button type="button" onclick={onCancel}>Cancel</button>
     </div>
-</main>
+</div>
 
 <style>
-    main {
+    #main {
         display: flex;
         flex-direction: column;
         gap: 8px;

@@ -47,47 +47,34 @@
     }
 </script>
 
-<Container fluid>
-    <Row class="mt-2">
-        <Col>
-            <select>
-                <option value="abc">ABC</option>
-            </select>
-        </Col>
-        <Col>
-            <Card>
-                <CardHeader>
-                    <CardTitle>New Resource</CardTitle>
-                </CardHeader>
-                <CardBody>
-                    <Label>Title</Label>
-                    <Input type="text" bind:value={item.title} />
-                    <Label>Description</Label>
-                    <Input type="textarea" bind:value={item.description} />
+<Card>
+    <CardHeader>
+        <CardTitle>New Resource</CardTitle>
+    </CardHeader>
+    <CardBody>
+        <Label>Title</Label>
+        <Input type="text" bind:value={item.title} />
+        <Label>Description</Label>
+        <Input type="textarea" bind:value={item.description} />
 
-                    <Button
-                        class="mt-4"
-                        onclick={() => {
-                            tagSelectorOpen = true;
-                        }}>Edit Tags</Button
-                    >
-                    <p>
-                        <i>Tags:</i>
-                        <span>{item.tags.map((e) => e.name).join(", ")}</span>
-                        <br />
-                        <i>TagsStr:</i>
-                        <span>{item.tags.map((e) => e.id).join(";")}</span>
-                    </p>
-                </CardBody>
-                <CardFooter>
-                    <Button color="primary" onclick={addResource}
-                        >Add Resource</Button
-                    >
-                </CardFooter>
-            </Card>
-        </Col>
-    </Row>
-</Container>
+        <Button
+            class="mt-4"
+            onclick={() => {
+                tagSelectorOpen = true;
+            }}>Edit Tags</Button
+        >
+        <p>
+            <i>Tags:</i>
+            <span>{item.tags.map((e) => e.name).join(", ")}</span>
+            <br />
+            <i>TagsStr:</i>
+            <span>{item.tags.map((e) => e.id).join(";")}</span>
+        </p>
+    </CardBody>
+    <CardFooter>
+        <Button color="primary" onclick={addResource}>Add Resource</Button>
+    </CardFooter>
+</Card>
 
 <TagsSelector
     isOpen={tagSelectorOpen}
