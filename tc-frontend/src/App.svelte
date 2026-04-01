@@ -21,7 +21,7 @@
   setContext("router", router);
 
   registry.register(
-    new BaseProcessor("base-v01", "Base Item", BaseViewer, BaseEditor),
+    new BaseProcessor("Base.v00", "Base Item", BaseViewer, BaseEditor),
   );
 </script>
 

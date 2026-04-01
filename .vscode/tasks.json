@@ -8,7 +8,10 @@
 			"command": [
 				"cd mh-backend",
 				"&&",
-				"podman run -it --rm --name mh_postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=metahub -p 5433:5432 -v $(pwd)/metahub/db/:/docker-entrypoint-initdb.d/ postgres"
+				"podman run -it --rm --name mh_postgres",
+				"-e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=metahub -p 5433:5432",
+				"-v ./metahub/db/:/docker-entrypoint-initdb.d/",
+				"postgres"
 			],
 		},
 		{
@@ -62,7 +65,10 @@
 			"command": [
 				"cd tc-backend",
 				"&&",
-				"podman run -it --rm --name tc_postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=tc -p 5430:5432 -v $(pwd)/tc/db/:/docker-entrypoint-initdb.d/ postgres"
+				"podman run -it --rm --name tc_postgres",
+				"-e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=tc -p 5430:5432",
+				"-v ./tc/db/:/docker-entrypoint-initdb.d/",
+				"postgres"
 			],
 		},
 		{
