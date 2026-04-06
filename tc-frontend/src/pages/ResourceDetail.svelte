@@ -51,7 +51,7 @@
                     <p>Registered type: [{item.data_type}] (no viewer found)</p>
                     <pre>{JSON.stringify(item.content, null, 2)}</pre>
                 {:else}
-                    <processor.viewer content={item.content} />
+                    <processor.viewer content_in={item.content} />
                 {/if}
             {:else}
                 <p>Loading...</p>

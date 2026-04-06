@@ -7,6 +7,7 @@ export { registry, BaseProcessor } from "./lib/processor";
 
 export { default as NewResource } from "./lib/NewResource.svelte";
 export { default as ResourceItem } from "./lib/ResourceItem.svelte";
+export { default as ResourceDetail } from "./pages/ResourceDetail.svelte";
 export { default as MainPage } from "./pages/MainPage.svelte";
 export { default as TagSearchResult } from "./pages/TagSearchResult.svelte";
-export { default as NewTypedResource} from "./pages/NewTypedResource.svelte";
+export { default as NewTypedResource } from "./pages/NewTypedResource.svelte";

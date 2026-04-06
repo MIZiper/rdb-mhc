@@ -5,11 +5,12 @@ The basic implementation for RDB, with typed data.
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from typing import Optional
+import json
 from uuid import UUID
 from asyncpg.connection import Connection
 from tc.db.connection import get_db
 from tc.models import NodeMetaRead, NodeMetaList
-from tc.models.typed_node import NodeData, NodeDataRead, NodeDataPayload
+from tc.models.typed_node import NodeData, NodeDataRead, NodeDataPayload, NodeTypedCreate
 
 router = APIRouter(prefix="/nodes")
 
@@ -65,6 +66,32 @@ async def list_nodes_by_type(
 
     return NodeMetaList(items=[result_map[nid] for nid in node_ids], total=count_result)
 
+@router.post("/typed", response_model=NodeMetaRead)
+async def add_node_with_content(node: NodeTypedCreate, conn: Connection = Depends(get_db)):
+    row = await conn.fetchrow(
+        "INSERT INTO nodes (title, description, content, content_type) VALUES ($1, $2, $3, $4) RETURNING id, updated_at",
+        node.title,
+        node.description,
+        json.dumps(node.content),
+        node.data_type,
+    )
+    if not row:
+        raise HTTPException(status_code=500, detail="Failed to create node")
+
+    for tag_id in node.tag_ids:
+        await conn.execute(
+            "INSERT INTO node_tags (node_id, tag_id) VALUES ($1, $2)", row["id"], tag_id
+        )
+
+    return NodeMetaRead(
+        id=row["id"],
+        title=node.title,
+        description=node.description,
+        updated_at=row["updated_at"],
+        tag_ids=node.tag_ids,
+        data_type=node.data_type,
+    )
+
 
 @router.get("/{node_id}/data", response_model=NodeDataRead)
 async def get_node_data(node_id: UUID, conn: Connection = Depends(get_db)):
@@ -84,7 +111,7 @@ async def get_node_data(node_id: UUID, conn: Connection = Depends(get_db)):
         id=row["id"],
         title=row["title"],
         description=row["description"],
-        content=content,
+        content=json.loads(content),
         data_type=row["content_type"],
         updated_at=row["updated_at"],
         tag_ids=tag_ids,

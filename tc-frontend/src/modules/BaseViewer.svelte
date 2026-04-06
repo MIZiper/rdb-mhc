@@ -1,10 +1,12 @@
 <script lang="ts">
-    let { data = {} }: { data?: Record<string, any> } = $props();
+    import type { ViewerProps } from "../lib/processor";
+
+    let { content_in }: ViewerProps = $props();
 </script>
 
 <div id="main">
     <span>Data (read-only)</span>
-    <pre>{JSON.stringify(data, null, 2)}</pre>
+    <pre>{JSON.stringify(content_in, null, 2)}</pre>
 </div>
 
 <style>

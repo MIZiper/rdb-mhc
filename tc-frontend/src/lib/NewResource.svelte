@@ -21,8 +21,11 @@
         id: null,
         update_time: new Date(),
         tags: [],
+        data_type: "",
     });
     let tagSelectorOpen: boolean = $state(false);
+
+    let { onSubmit } = $props();
 
     function useTags(_tags: TagMeta[]) {
         if (item) {
@@ -72,7 +75,13 @@
         </p>
     </CardBody>
     <CardFooter>
-        <Button color="primary" onclick={addResource}>Add Resource</Button>
+        <Button
+            color="primary"
+            onclick={() => {
+                if (onSubmit) onSubmit(item);
+                else addResource();
+            }}>Add Resource</Button
+        >
     </CardFooter>
 </Card>
 

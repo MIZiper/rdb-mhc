@@ -60,3 +60,12 @@ class NodeDataRead(BaseModel):
     content: NodeData
     data_type: str | None
     tag_ids: list[int] = Field(default_factory=list)
+
+
+
+class NodeTypedCreate(BaseModel):
+    title: str
+    description: str
+    content: dict
+    data_type: str
+    tag_ids: list[int]
