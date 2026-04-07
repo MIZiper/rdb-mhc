@@ -24,7 +24,7 @@
     }
 
     function colorFromHash(s: string) {
-        const h = hashString(s);
+        const h = hashString(s.split(".")[0]);
         const hue = h % 360;
         return `hsl(${hue} 65% 45%)`;
     }

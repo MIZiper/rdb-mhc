@@ -66,6 +66,6 @@ class NodeDataRead(BaseModel):
 class NodeTypedCreate(BaseModel):
     title: str
     description: str
-    content: dict
+    content: dict | list[dict]
     data_type: str
     tag_ids: list[int]
