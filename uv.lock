@@ -136,7 +136,7 @@ wheels = [
 
 [[package]]
 name = "miz-metahub"
-version = "0.0.1a1"
+version = "0.0.2.dev0"
 source = { editable = "mh-backend" }
 dependencies = [
     { name = "asyncpg" },
@@ -155,12 +155,12 @@ requires-dist = [
 
 [[package]]
 name = "miz-mhc"
-version = "0.0.1a0"
+version = "0.0.2.dev0"
 source = { virtual = "." }
 
 [[package]]
 name = "miz-tc"
-version = "0.0.1a0"
+version = "0.0.2.dev0"
 source = { editable = "tc-backend" }
 dependencies = [
     { name = "asyncpg" },

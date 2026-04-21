@@ -1,6 +1,6 @@
 [project]
 name = "miz-tc"
-version = "0.0.1a0"
+version = "0.0.2.dev0"
 description = "TemplateClient for RDB resource browsing"
 readme = "README.md"
 requires-python = ">=3.12"
