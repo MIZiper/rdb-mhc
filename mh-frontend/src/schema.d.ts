@@ -14,3 +14,28 @@ export interface Category {
     name: string;
     client_id?: number;
 };
+
+export interface Client {
+    id: number | null;
+    name: string;
+    host: string | null;
+};
+
+export interface NodeRegistration {
+    tag_id: number;
+    client_id: number;
+    client_node_id: string;
+    node_tag_ids: number[];
+    params: Record<string, unknown>;
+};
+
+export interface NodeRegistrationList {
+    items: NodeRegistration[];
+    total: number;
+};
+
+export interface TagDescendant {
+    id: number;
+    name: string;
+    parent_id: number | null;
+};

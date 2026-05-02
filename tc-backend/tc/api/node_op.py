@@ -9,7 +9,8 @@ from typing import Optional
 from uuid import UUID
 from asyncpg.connection import Connection
 from tc.db.connection import get_db
-from tc.models import NodeMetaRead, NodeMetaList, NodeCreate
+from tc.models import NodeMetaRead, NodeMetaList, NodeCreate, NodeUpdate
+from tc.services.metahub_client import expand_tag_ids
 
 router = APIRouter(prefix="/nodes")
 
@@ -114,15 +115,16 @@ async def search_nodes_by_tags(
     ),
 ):
     if not tag_ids:
-        return []
+        return NodeMetaList(items=[], total=0)
 
-    # 构建 SQL 查询
-    # 关键点：
-    # 1. WHERE nt.tag_id = ANY($1): 高效过滤数组
-    # 2. COUNT(nt.tag_id) AS match_count: 计算相关性权重
-    # 3. GROUP BY n.id: 按节点分组以进行计数
-    # 4. ORDER BY match_count DESC: 匹配越多越靠前
-    query = """
+    search_tag_ids = tag_ids
+    if mode == "ancestors" or mode == "expanded":
+        search_tag_ids = await expand_tag_ids(tag_ids)
+
+    limit_clause = "LIMIT $2" if limit else ""
+    args = [search_tag_ids, limit] if limit else [search_tag_ids]
+
+    query = f"""
         SELECT
             n.id,
             n.title,
@@ -140,13 +142,10 @@ async def search_nodes_by_tags(
         WHERE nt.tag_id = ANY($1)
         GROUP BY n.id
         ORDER BY match_count DESC, n.id ASC
-        ${limit_clause}
+        {limit_clause}
     """
 
-    final_query = query.replace("${limit_clause}", "LIMIT $2" if limit else "")
-    args = [tag_ids, limit] if limit else [tag_ids]
-
-    rows = await conn.fetch(final_query, *args)
+    rows = await conn.fetch(query, *args)
 
     return NodeMetaList(
         items=[
@@ -167,18 +166,81 @@ async def search_nodes_by_tags(
 @router.get("/{node_id}/meta", response_model=NodeMetaRead)
 async def get_node_meta(node_id: UUID, conn: Connection = Depends(get_db)):
     row = await conn.fetchrow(
-        "SELECT id, title, description, updated_at FROM nodes WHERE id=$1;",
+        "SELECT id, title, description, updated_at, content_type FROM nodes WHERE id=$1;",
         node_id,
     )
     if row is None:
         raise HTTPException(status_code=404, detail="Node not found")
+    tags_rows = await conn.fetch(
+        "SELECT tag_id FROM node_tags WHERE node_id=$1", node_id
+    )
+    tag_ids = [r["tag_id"] for r in tags_rows]
     return NodeMetaRead(
         id=row["id"],
-        tag_ids=[],
+        tag_ids=tag_ids,
         title=row["title"],
         description=row["description"],
         updated_at=row["updated_at"],
-        data_type=None,
+        data_type=row["content_type"],
+    )
+
+
+@router.patch("/{node_id}/meta", response_model=NodeMetaRead)
+async def update_node_meta(
+    node_id: UUID,
+    node: NodeUpdate,
+    conn: Connection = Depends(get_db),
+):
+    existing = await conn.fetchrow(
+        "SELECT id FROM nodes WHERE id=$1", node_id
+    )
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Node not found")
+
+    sets = []
+    args = []
+    idx = 1
+
+    if node.title is not None:
+        sets.append(f"title=${idx}")
+        args.append(node.title)
+        idx += 1
+    if node.description is not None:
+        sets.append(f"description=${idx}")
+        args.append(node.description)
+        idx += 1
+    if sets:
+        sets.append("updated_at=NOW()")
+        sql = f"UPDATE nodes SET {', '.join(sets)} WHERE id=${idx} RETURNING id, title, description, updated_at, content_type"
+        args.append(node_id)
+        row = await conn.fetchrow(sql, *args)
+    else:
+        row = await conn.fetchrow(
+            "SELECT id, title, description, updated_at, content_type FROM nodes WHERE id=$1",
+            node_id,
+        )
+
+    if node.tag_ids is not None:
+        await conn.execute("DELETE FROM node_tags WHERE node_id=$1", node_id)
+        for tid in node.tag_ids:
+            await conn.execute(
+                "INSERT INTO node_tags (node_id, tag_id) VALUES ($1, $2)",
+                node_id,
+                tid,
+            )
+
+    tags_rows = await conn.fetch(
+        "SELECT tag_id FROM node_tags WHERE node_id=$1", node_id
+    )
+    tag_ids = [r["tag_id"] for r in tags_rows]
+
+    return NodeMetaRead(
+        id=node_id,
+        title=row["title"],
+        description=row["description"],
+        updated_at=row["updated_at"],
+        tag_ids=tag_ids,
+        data_type=row["content_type"],
     )
 
 

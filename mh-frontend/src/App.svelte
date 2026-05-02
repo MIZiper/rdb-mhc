@@ -5,21 +5,14 @@
   import {
     Navbar,
     NavbarBrand,
-    Collapse,
     Nav,
     NavItem,
     NavLink,
-    NavbarToggler,
-    Dropdown,
-    DropdownToggle,
-    DropdownMenu,
-    DropdownItem,
   } from "@sveltestrap/sveltestrap";
   import { router } from "./router";
   import { setContext } from "svelte";
 
   setContext("router", router);
-  let isOpen: boolean = $state(false);
 </script>
 
 <Styles />
@@ -32,21 +25,11 @@
     </NavbarBrand>
 
     <Nav>
-      <!-- <NavItem>
-        <NavLink href="#">Link</NavLink>
-      </NavItem>
-      <Dropdown nav {isOpen} toggle={() => (isOpen = !isOpen)}>
-        <DropdownToggle nav caret>Dropdown</DropdownToggle>
-        <DropdownMenu>
-          <DropdownItem header>Header</DropdownItem>
-          <DropdownItem disabled>Action</DropdownItem>
-          <DropdownItem>Another Action</DropdownItem>
-          <DropdownItem divider />
-          <DropdownItem>Another Action</DropdownItem>
-        </DropdownMenu>
-      </Dropdown> -->
       <NavItem>
-        <NavLink href="/admin/">Admin</NavLink>
+        <NavLink href="/clients">Clients</NavLink>
+      </NavItem>
+      <NavItem>
+        <NavLink href="/nodes">Registered Nodes</NavLink>
       </NavItem>
       <NavItem>
         <NavLink href="/dev-test">Test Page</NavLink>

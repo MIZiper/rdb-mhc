@@ -1,8 +1,14 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query, Body
 from asyncpg.connection import Connection
 from metahub.db.connection import get_db
 from metahub.models.tags import TagCreateUpdate, TagRead, TagWithParent, TagExposed
-from metahub.models.clients import CategoryRead
+from metahub.models.clients import CategoryRead, ClientRead
+from metahub.models.nodes import (
+    DeepSearchRequest,
+    DeepSearchResult,
+    TagDescendant,
+)
+from metahub.services.tc_client import fetch_tc_nodes_by_tags
 
 router = APIRouter()
 
@@ -98,9 +104,229 @@ async def set_tag_dependencies(
     await conn.execute("SELECT sync_tag_dependencies($1, $2)", tag_id, dependency_ids)
 
 
+@router.get("/tags/{tag_id}/dependencies", response_model=list[int])
+async def get_tag_dependencies(tag_id: int, conn: Connection = Depends(get_db)):
+    rows = await conn.fetch(
+        "SELECT dependent_tag_id FROM tag_relations WHERE tag_id=$1 AND relation_type='DEPENDENCY'",
+        tag_id,
+    )
+    return [r["dependent_tag_id"] for r in rows]
+
+
 @router.get("/tags/{tag_id}/children", response_model=list[int])
 async def get_tag_children(tag_id: int, conn: Connection = Depends(get_db)):
     rows = await conn.fetch(
         "SELECT tag_id FROM tag_relations WHERE dependent_tag_id=$1", tag_id
     )
     return [r["tag_id"] for r in rows]
+
+
+@router.get("/tags/{tag_id}/descendants", response_model=list[TagDescendant])
+async def get_tag_descendants(tag_id: int, conn: Connection = Depends(get_db)):
+    rows = await conn.fetch(
+        """
+        WITH RECURSIVE descendants AS (
+            SELECT tr.tag_id, tr.dependent_tag_id, 1 AS depth
+            FROM tag_relations tr
+            WHERE tr.dependent_tag_id = $1 AND tr.relation_type = 'PRIMARY'
+            UNION ALL
+            SELECT tr.tag_id, tr.dependent_tag_id, d.depth + 1
+            FROM tag_relations tr
+            JOIN descendants d ON tr.dependent_tag_id = d.tag_id
+            WHERE tr.relation_type = 'PRIMARY' AND d.depth < 100
+        )
+        SELECT DISTINCT t.id, t.name, tr.dependent_tag_id AS parent_id
+        FROM descendants d
+        JOIN tags t ON t.id = d.tag_id
+        LEFT JOIN tag_relations tr
+            ON tr.tag_id = t.id AND tr.relation_type = 'PRIMARY'
+        ORDER BY t.id
+        """
+        , tag_id,
+    )
+    return [
+        TagDescendant(
+            id=r["id"],
+            name=r["name"],
+            parent_id=r["parent_id"],
+        )
+        for r in rows
+    ]
+
+
+@router.get("/tags/exposed", response_model=list[TagRead])
+async def get_exposed_tags(
+    category_id: int | None = Query(None),
+    conn: Connection = Depends(get_db),
+):
+    if category_id is not None:
+        rows = await conn.fetch(
+            "SELECT id, name, exposed, category_id FROM tags "
+            "WHERE exposed=TRUE AND category_id=$1",
+            category_id,
+        )
+    else:
+        rows = await conn.fetch(
+            "SELECT id, name, exposed, category_id FROM tags WHERE exposed=TRUE"
+        )
+    return [
+        TagRead(
+            id=r["id"],
+            name=r["name"],
+            category_id=r["category_id"],
+            exposed=r["exposed"],
+        )
+        for r in rows
+    ]
+
+
+@router.post("/search/expand", response_model=list[int])
+async def expand_tag_ids(
+    tag_ids: list[int] = Body(...),
+    conn: Connection = Depends(get_db),
+):
+    if not tag_ids:
+        return []
+    rows = await conn.fetch(
+        """
+        WITH RECURSIVE descendants AS (
+            SELECT tr.tag_id, tr.dependent_tag_id
+            FROM tag_relations tr
+            WHERE tr.dependent_tag_id = ANY($1) AND tr.relation_type = 'PRIMARY'
+            UNION ALL
+            SELECT tr.tag_id, tr.dependent_tag_id
+            FROM tag_relations tr
+            JOIN descendants d ON tr.dependent_tag_id = d.tag_id
+            WHERE tr.relation_type = 'PRIMARY'
+        )
+        SELECT DISTINCT tag_id FROM descendants
+        UNION
+        SELECT unnest($1::int[])
+        """
+        , tag_ids,
+    )
+    result = [r["tag_id"] for r in rows]
+    return sorted(result)
+
+
+@router.post("/search/deep", response_model=DeepSearchResult)
+async def deep_search(
+    search: DeepSearchRequest,
+    conn: Connection = Depends(get_db),
+):
+    expanded_tag_ids = list(search.tag_ids)
+
+    if search.include_descendants:
+        rows = await conn.fetch(
+            """
+            WITH RECURSIVE descendants AS (
+                SELECT tr.tag_id, tr.dependent_tag_id
+                FROM tag_relations tr
+                WHERE tr.dependent_tag_id = ANY($1) AND tr.relation_type = 'PRIMARY'
+                UNION ALL
+                SELECT tr.tag_id, tr.dependent_tag_id
+                FROM tag_relations tr
+                JOIN descendants d ON tr.dependent_tag_id = d.tag_id
+                WHERE tr.relation_type = 'PRIMARY'
+            )
+            SELECT DISTINCT tag_id FROM descendants
+            UNION
+            SELECT unnest($1::int[])
+            """
+            , search.tag_ids,
+        )
+        expanded_tag_ids = sorted(set(r["tag_id"] for r in rows))
+
+    bound_node_ids = []
+
+    if search.include_bound_nodes:
+        bound_rows = await conn.fetch(
+            """
+            SELECT rn.tag_id, rn.client_id, rn.client_node_id, rn.node_tag_ids, rn.params,
+                   c.host AS client_host
+            FROM registered_nodes rn
+            JOIN clients c ON c.id = rn.client_id
+            WHERE rn.node_tag_ids && $1::int[]
+            """
+            , expanded_tag_ids,
+        )
+        for br in bound_rows:
+            bound_node_ids.append({
+                "tag_id": br["tag_id"],
+                "client_id": br["client_id"],
+                "client_host": br["client_host"],
+                "client_node_id": str(br["client_node_id"]),
+                "node_tag_ids": br["node_tag_ids"] or [],
+                "params": br["params"] or {},
+            })
+
+    return DeepSearchResult(
+        expanded_tag_ids=expanded_tag_ids,
+        bound_node_ids=bound_node_ids,
+    )
+
+
+@router.post("/search/deep/nodes")
+async def search_deep_nodes(
+    search: DeepSearchRequest,
+    conn: Connection = Depends(get_db),
+):
+    expanded_tag_ids = list(search.tag_ids)
+
+    if search.include_descendants:
+        rows = await conn.fetch(
+            """
+            WITH RECURSIVE descendants AS (
+                SELECT tr.tag_id, tr.dependent_tag_id
+                FROM tag_relations tr
+                WHERE tr.dependent_tag_id = ANY($1) AND tr.relation_type = 'PRIMARY'
+                UNION ALL
+                SELECT tr.tag_id, tr.dependent_tag_id
+                FROM tag_relations tr
+                JOIN descendants d ON tr.dependent_tag_id = d.tag_id
+                WHERE tr.relation_type = 'PRIMARY'
+            )
+            SELECT DISTINCT tag_id FROM descendants
+            UNION
+            SELECT unnest($1::int[])
+            """
+            , search.tag_ids,
+        )
+        expanded_tag_ids = sorted(set(r["tag_id"] for r in rows))
+
+    bound_nodes = {}
+    if search.include_bound_nodes:
+        bound_rows = await conn.fetch(
+            """
+            SELECT rn.tag_id, rn.client_id, rn.client_node_id, rn.node_tag_ids, rn.params,
+                   c.host AS client_host
+            FROM registered_nodes rn
+            JOIN clients c ON c.id = rn.client_id
+            WHERE rn.node_tag_ids && $1::int[]
+            """
+            , expanded_tag_ids,
+        )
+        for br in bound_rows:
+            host = br["client_host"]
+            if host and host not in bound_nodes:
+                nodes = await fetch_tc_nodes_by_tags(
+                    host, expanded_tag_ids, mode="exact"
+                )
+                bound_nodes[host] = nodes
+
+    tc_results = {}
+    clients = await conn.fetch("SELECT id, host FROM clients WHERE host IS NOT NULL")
+    for client in clients:
+        host = client["host"]
+        if host:
+            nodes = await fetch_tc_nodes_by_tags(
+                host, expanded_tag_ids, mode="exact"
+            )
+            if nodes:
+                tc_results[host] = nodes
+
+    return {
+        "expanded_tag_ids": expanded_tag_ids,
+        "tc_results": tc_results,
+        "bound_nodes": bound_nodes,
+    }

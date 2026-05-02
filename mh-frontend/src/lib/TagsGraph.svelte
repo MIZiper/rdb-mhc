@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import type { Tag } from "../schema";
+    import type { TagDetail } from "../schema";
     import {
         forceSimulation,
         forceManyBody,
@@ -9,7 +9,7 @@
     } from "d3-force";
 
     interface TagNode {
-        tag: Tag,
+        tag: TagDetail,
         x: number;
         y: number;
         depth: number;
@@ -26,10 +26,10 @@
         onDblClickTag,
         onReparentTag,
     }: {
-        tags: Tag[];
-        onSelectTag: (tag: Tag | null) => void;
-        onDblClickTag: (tag: Tag) => Promise<boolean>;
-        onReparentTag: (fromTag: Tag, toTag: Tag) => Promise<boolean>;
+        tags: TagDetail[];
+        onSelectTag: (tag: TagDetail | null) => void;
+        onDblClickTag: (tag: TagDetail) => Promise<boolean>;
+        onReparentTag: (fromTag: TagDetail, toTag: TagDetail) => Promise<boolean>;
     } = $props();
     let canvas: HTMLCanvasElement;
     let ctx: CanvasRenderingContext2D | null;

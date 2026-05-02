@@ -34,18 +34,35 @@
         tagSelectorOpen = false;
     }
 
-    async function addResource() {
-        const res = await fetch(`/api/nodes/`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                title: item.title,
-                description: item.description,
-                tag_ids: item.tags.map((e) => e.id),
-            }),
-        });
+    let saving = $state(false);
+    let errorMsg = $state("");
 
-        if (!res.ok) {
+    async function addResource() {
+        saving = true;
+        errorMsg = "";
+        try {
+            const res = await fetch(`/api/nodes/`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    title: item.title,
+                    description: item.description,
+                    tag_ids: item.tags.map((e) => e.id),
+                }),
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                errorMsg = err.detail || "Failed to create resource";
+            } else {
+                item.title = "";
+                item.description = "";
+                item.tags = [];
+            }
+        } catch (e: any) {
+            errorMsg = e.message;
+        } finally {
+            saving = false;
         }
     }
 </script>
@@ -75,12 +92,16 @@
         </p>
     </CardBody>
     <CardFooter>
+        {#if errorMsg}
+            <div class="text-danger mb-2">{errorMsg}</div>
+        {/if}
         <Button
             color="primary"
+            disabled={saving}
             onclick={() => {
                 if (onSubmit) onSubmit(item);
                 else addResource();
-            }}>Add Resource</Button
+            }}>{saving ? "Saving..." : "Add Resource"}</Button
         >
     </CardFooter>
 </Card>
