@@ -28,7 +28,7 @@ async def fetch_tc_nodes_by_tags(
     limit: int | None = None,
 ) -> list[dict]:
     client = get_tc_client()
-    url = f"http://{client_host}/api/nodes/by_tags"
+    url = f"http://{client_host}/api/nodes/by-tags"
     params = {"mode": mode}
     if limit:
         params["limit"] = limit

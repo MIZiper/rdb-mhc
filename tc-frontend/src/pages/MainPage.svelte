@@ -81,7 +81,7 @@
 
             totalItems = data.total || 0;
         } catch (err: any) {
-            error = err.message || "加载失败";
+            error = err.message || "Failed to load";
             console.error(err);
         } finally {
             loading = false;
@@ -155,14 +155,14 @@
     </Row>
 
     {#if loading}
-        <p>加载中...</p>
+        <p>Loading...</p>
     {:else if error}
-        <p class="error">出错啦: {error}</p>
+        <p class="error">Error: {error}</p>
     {:else if items.length === 0}
-        <p>暂无数据匹配。</p>
+        <p>No results found.</p>
     {:else}
         <p class="meta">
-            共 {totalItems} 个结果 (第 {currentPage} / {totalPages} 页)
+            {totalItems} results (Page {currentPage} / {totalPages})
         </p>
 
         <ListGroup class="mt-2">

@@ -52,7 +52,7 @@
 </script>
 
 <Container class="my-2" fluid>
-    <h5>New Typed Resource</h5>
+    <h4>New Typed Resource</h4>
     {#if errorMsg}
         <div class="alert alert-danger">{errorMsg}</div>
     {/if}

@@ -62,10 +62,10 @@
     onMount(fetchData);
 </script>
 
-<Container fluid class="mt-3">
+<Container fluid class="mt-2">
     <Row class="mb-3">
         <Col>
-            <h3>MetaHub Dashboard</h3>
+            <h4>MetaHub Dashboard</h4>
             <p class="text-muted">
                 Tag management, registration and search platform
             </p>
@@ -81,7 +81,7 @@
             <Col md="3">
                 <Card class="text-center">
                     <CardBody>
-                        <h2>{clients.length}</h2>
+                        <div class="fs-1 fw-bold">{clients.length}</div>
                         <p class="text-muted">Clients</p>
                     </CardBody>
                 </Card>
@@ -89,7 +89,7 @@
             <Col md="3">
                 <Card class="text-center">
                     <CardBody>
-                        <h2>{categories.length}</h2>
+                        <div class="fs-1 fw-bold">{categories.length}</div>
                         <p class="text-muted">Categories</p>
                     </CardBody>
                 </Card>
@@ -97,12 +97,12 @@
             <Col md="3">
                 <Card class="text-center">
                     <CardBody>
-                        <h2>
+                        <div class="fs-1 fw-bold">
                             {Object.values(tagCount).reduce(
                                 (sum, n) => sum + n,
                                 0,
                             )}
-                        </h2>
+                        </div>
                         <p class="text-muted">Tags</p>
                     </CardBody>
                 </Card>
@@ -110,14 +110,14 @@
             <Col md="3">
                 <Card class="text-center">
                     <CardBody>
-                        <h2>{nodeCount}</h2>
+                        <div class="fs-1 fw-bold">{nodeCount}</div>
                         <p class="text-muted">Registered Nodes</p>
                     </CardBody>
                 </Card>
             </Col>
         </Row>
 
-        <h5>Clients</h5>
+        <h6>Clients</h6>
         {#if clients.length === 0}
             <p class="text-muted">
                 No clients registered yet.

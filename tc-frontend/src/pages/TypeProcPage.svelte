@@ -81,7 +81,7 @@
 </script>
 
 <Container class="my-2" fluid>
-    <h5>Type: {type_name}</h5>
+    <h4>Type: {type_name}</h4>
     {#if loading}
         <div class="text-center py-5"><Spinner /></div>
     {:else if error}

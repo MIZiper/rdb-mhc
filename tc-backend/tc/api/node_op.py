@@ -103,10 +103,10 @@ async def list_nodes(
     return NodeMetaList(items=[result_map[nid] for nid in node_ids], total=count_result)
 
 
-@router.post("/by_tags", response_model=NodeMetaList)
+@router.post("/by-tags", response_model=NodeMetaList)
 async def search_nodes_by_tags(
     conn: Connection = Depends(get_db),
-    tag_ids: list[int] = Body(..., description="Search by tags"),
+    tag_ids: list[int] = Body(..., description="Tag IDs to search"),
     limit: Optional[int] = Query(
         None, ge=1, le=100, description="Limits of results returned"
     ),

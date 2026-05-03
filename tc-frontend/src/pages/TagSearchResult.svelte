@@ -16,7 +16,7 @@
     async function loadData(tag_ids: number[]) {
         loading = true;
 
-        const res = await fetch(`/api/nodes/by_tags`, {
+        const res = await fetch(`/api/nodes/by-tags`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(tag_ids),
