@@ -77,7 +77,7 @@
             }
         }
         if (allTagIds.size > 0) {
-            const res = await fetch("/api/tags/search", {
+            const res = await fetch("/api/tags/resolve", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify([...allTagIds]),

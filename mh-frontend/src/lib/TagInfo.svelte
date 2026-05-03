@@ -50,7 +50,7 @@
             if (res.ok) {
                 children = await res.json();
                 if (children.length > 0) {
-                    const namesRes = await fetch(`/api/tags/search`, {
+                    const namesRes = await fetch(`/api/tags/resolve`, {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify(children),

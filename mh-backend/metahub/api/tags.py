@@ -65,8 +65,8 @@ async def add_tag_for(
     )
 
 
-@router.post("/tags/search", response_model=list[TagExposed])
-async def search_tag_relationships(tag_ids: list[int], conn: Connection=Depends(get_db)):
+@router.post("/tags/resolve", response_model=list[TagExposed])
+async def resolve_tag_ids(tag_ids: list[int], conn: Connection=Depends(get_db)):
     rows = await conn.fetch(
         "SELECT id, name, parent_id FROM tags WHERE id=ANY($1)", tag_ids
     )
@@ -163,7 +163,7 @@ async def get_exposed_tags(
     ]
 
 
-@router.post("/search/expand", response_model=list[int])
+@router.post("/tags/expand", response_model=list[int])
 async def expand_tag_ids(
     tag_ids: list[int] = Body(...),
     conn: Connection = Depends(get_db),
@@ -187,7 +187,7 @@ async def expand_tag_ids(
     return sorted(r["id"] for r in rows)
 
 
-@router.post("/search/deep", response_model=DeepSearchResult)
+@router.post("/tags/deep", response_model=DeepSearchResult)
 async def deep_search(
     search: DeepSearchRequest,
     conn: Connection = Depends(get_db),
@@ -240,7 +240,7 @@ async def deep_search(
     )
 
 
-@router.post("/search/deep/nodes")
+@router.post("/tags/deep/nodes")
 async def search_deep_nodes(
     search: DeepSearchRequest,
     conn: Connection = Depends(get_db),

@@ -30,7 +30,7 @@ def get_metahub_url(path: str) -> str:
 
 async def expand_tag_ids(tag_ids: list[int]) -> list[int]:
     client = get_mh_client()
-    url = get_metahub_url("/api/search/expand")
+    url = get_metahub_url("/api/tags/expand")
     try:
         resp = await client.post(url, json=tag_ids)
         resp.raise_for_status()
@@ -43,7 +43,7 @@ async def fetch_tag_relationships(
     tag_ids: list[int],
 ) -> dict[int, dict]:
     client = get_mh_client()
-    url = get_metahub_url("/api/tags/search")
+    url = get_metahub_url("/api/tags/resolve")
     try:
         resp = await client.post(url, json=tag_ids)
         resp.raise_for_status()
@@ -74,7 +74,7 @@ async def deep_search(
     include_bound_nodes: bool = True,
 ) -> dict:
     client = get_mh_client()
-    url = get_metahub_url("/api/search/deep")
+    url = get_metahub_url("/api/tags/deep")
     try:
         resp = await client.post(
             url,

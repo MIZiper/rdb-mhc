@@ -7,7 +7,7 @@ export async function fetch_tags_info(
     all_tag_ids: number[],
 ): Promise<TagsCache> {
     if (all_tag_ids.length === 0) return [];
-    const res = await fetch(`${mh_host}/api/tags/search`, {
+    const res = await fetch(`${mh_host}/api/tags/resolve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(all_tag_ids),
