@@ -317,7 +317,7 @@
     {/if}
 </Container>
 
-<Modal {isModalOpen} toggle={closeModal}>
+<Modal isOpen={isModalOpen} toggle={closeModal}>
     <ModalHeader>
         {editReg ? "Edit Node Registration" : "Register Node"}
     </ModalHeader>
