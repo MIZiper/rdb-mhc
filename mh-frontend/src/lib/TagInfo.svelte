@@ -8,8 +8,6 @@
         CardSubtitle,
         CardTitle,
         Input,
-        ListGroup,
-        ListGroupItem,
         Badge,
     } from "@sveltestrap/sveltestrap";
     import type { TagDetail } from "../schema";
@@ -26,7 +24,6 @@
 
     let tagName: string = $state("");
     let tagExposed: boolean = $state(false);
-    let dependencies: { id: number; name: string }[] = $state([]);
     let children: number[] = $state([]);
     let childNames: Record<number, string> = $state({});
     let saving: boolean = $state(false);
@@ -35,48 +32,16 @@
         if (tag) {
             tagName = tag.name;
             tagExposed = tag.exposed;
-            dependencies = [];
             children = [];
             childNames = {};
-            fetchDependencies();
             fetchChildren();
         } else {
             tagName = "";
             tagExposed = false;
-            dependencies = [];
             children = [];
             childNames = {};
         }
     });
-
-    async function fetchDependencies() {
-        if (!tag || !tag.id) return;
-        try {
-            const depIdsRes = await fetch(
-                `/api/tags/${tag.id}/dependencies`,
-            );
-            if (!depIdsRes.ok) return;
-            const depIds: number[] = await depIdsRes.json();
-            if (depIds.length > 0) {
-                const namesRes = await fetch(`/api/tags/search`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(depIds),
-                });
-                if (namesRes.ok) {
-                    const names = await namesRes.json();
-                    for (const depId of depIds) {
-                        const dep = names.find((t: any) => t.id === depId);
-                        dependencies.push({
-                            id: depId,
-                            name: dep?.name || `Tag #${depId}`,
-                        });
-                    }
-                    dependencies = dependencies;
-                }
-            }
-        } catch (_) {}
-    }
 
     async function fetchChildren() {
         if (!tag || !tag.id) return;
@@ -132,18 +97,6 @@
             <div class="mt-1">
                 <strong>Category ID: </strong>{tag.category_id}
             </div>
-            {#if dependencies.length > 0}
-                <div class="mt-2">
-                    <strong>Dependencies:</strong>
-                    <ListGroup flush class="mt-1">
-                        {#each dependencies as dep}
-                            <ListGroupItem
-                                ><Badge>{dep.name}</Badge></ListGroupItem
-                            >
-                        {/each}
-                    </ListGroup>
-                </div>
-            {/if}
             <div class="mt-2">
                 <strong>Children ({children.length}):</strong>
                 {#if children.length > 0}

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query, Body
 from asyncpg.connection import Connection
 from metahub.db.connection import get_db
 from metahub.models.tags import TagCreateUpdate, TagRead, TagWithParent, TagExposed
-from metahub.models.clients import CategoryRead, ClientRead
+from metahub.models.clients import CategoryRead
 from metahub.models.nodes import (
     DeepSearchRequest,
     DeepSearchResult,
@@ -33,12 +33,7 @@ async def get_tags_of(category_id: int, conn: Connection = Depends(get_db)):
 @router.get("/tags/with-parent", response_model=list[TagWithParent])
 async def get_tags_with_parent(category_id: int, conn: Connection = Depends(get_db)):
     rows = await conn.fetch(
-        """
-        SELECT t.id, t.name, t.exposed, t.category_id, tr.dependent_tag_id AS parent_id
-        FROM tags t
-        LEFT JOIN tag_relations tr ON t.id = tr.tag_id AND tr.relation_type = 'PRIMARY'
-        WHERE t.category_id = $1
-    """,
+        "SELECT id, name, exposed, category_id, parent_id FROM tags WHERE category_id = $1",
         category_id,
     )
     return [
@@ -69,12 +64,17 @@ async def add_tag_for(
         id=result["id"], name=tag.name, category_id=category_id, exposed=tag.exposed
     )
 
+
 @router.post("/tags/search", response_model=list[TagExposed])
 async def search_tag_relationships(tag_ids: list[int], conn: Connection=Depends(get_db)):
-    rows = await conn.fetch("SELECT id, name FROM tags WHERE id=ANY($1)", tag_ids)
+    rows = await conn.fetch(
+        "SELECT id, name, parent_id FROM tags WHERE id=ANY($1)", tag_ids
+    )
     return [
-        TagExposed(id=r['id'], name=r['name']) for r in rows
+        TagExposed(id=r["id"], name=r["name"], parent_id=r["parent_id"])
+        for r in rows
     ]
+
 
 @router.delete("/tags/{tag_id}")
 async def delete_tag(tag_id: int, conn: Connection = Depends(get_db)):
@@ -94,31 +94,19 @@ async def modify_tag(
 async def set_tag_parent(
     tag_id: int, parent_id: int | None, conn: Connection = Depends(get_db)
 ):
-    await conn.execute("SELECT set_tag_primary($1, $2)", tag_id, parent_id)
-
-
-@router.patch("/tags/{tag_id}/dependencies")
-async def set_tag_dependencies(
-    tag_id: int, dependency_ids: list[int], conn: Connection = Depends(get_db)
-):
-    await conn.execute("SELECT sync_tag_dependencies($1, $2)", tag_id, dependency_ids)
-
-
-@router.get("/tags/{tag_id}/dependencies", response_model=list[int])
-async def get_tag_dependencies(tag_id: int, conn: Connection = Depends(get_db)):
-    rows = await conn.fetch(
-        "SELECT dependent_tag_id FROM tag_relations WHERE tag_id=$1 AND relation_type='DEPENDENCY'",
-        tag_id,
+    if parent_id is not None and parent_id == tag_id:
+        return
+    await conn.execute(
+        "UPDATE tags SET parent_id=$1 WHERE id=$2", parent_id, tag_id
     )
-    return [r["dependent_tag_id"] for r in rows]
 
 
 @router.get("/tags/{tag_id}/children", response_model=list[int])
 async def get_tag_children(tag_id: int, conn: Connection = Depends(get_db)):
     rows = await conn.fetch(
-        "SELECT tag_id FROM tag_relations WHERE dependent_tag_id=$1", tag_id
+        "SELECT id FROM tags WHERE parent_id=$1", tag_id
     )
-    return [r["tag_id"] for r in rows]
+    return [r["id"] for r in rows]
 
 
 @router.get("/tags/{tag_id}/descendants", response_model=list[TagDescendant])
@@ -126,23 +114,18 @@ async def get_tag_descendants(tag_id: int, conn: Connection = Depends(get_db)):
     rows = await conn.fetch(
         """
         WITH RECURSIVE descendants AS (
-            SELECT tr.tag_id, tr.dependent_tag_id, 1 AS depth
-            FROM tag_relations tr
-            WHERE tr.dependent_tag_id = $1 AND tr.relation_type = 'PRIMARY'
+            SELECT id, name, parent_id, 1 AS depth
+            FROM tags
+            WHERE parent_id = $1
             UNION ALL
-            SELECT tr.tag_id, tr.dependent_tag_id, d.depth + 1
-            FROM tag_relations tr
-            JOIN descendants d ON tr.dependent_tag_id = d.tag_id
-            WHERE tr.relation_type = 'PRIMARY' AND d.depth < 100
+            SELECT t.id, t.name, t.parent_id, d.depth + 1
+            FROM tags t
+            JOIN descendants d ON t.parent_id = d.id
+            WHERE d.depth < 100
         )
-        SELECT DISTINCT t.id, t.name, tr.dependent_tag_id AS parent_id
-        FROM descendants d
-        JOIN tags t ON t.id = d.tag_id
-        LEFT JOIN tag_relations tr
-            ON tr.tag_id = t.id AND tr.relation_type = 'PRIMARY'
-        ORDER BY t.id
-        """
-        , tag_id,
+        SELECT DISTINCT id, name, parent_id FROM descendants ORDER BY id
+        """,
+        tag_id,
     )
     return [
         TagDescendant(
@@ -190,23 +173,18 @@ async def expand_tag_ids(
     rows = await conn.fetch(
         """
         WITH RECURSIVE descendants AS (
-            SELECT tr.tag_id, tr.dependent_tag_id
-            FROM tag_relations tr
-            WHERE tr.dependent_tag_id = ANY($1) AND tr.relation_type = 'PRIMARY'
+            SELECT id, parent_id FROM tags WHERE parent_id = ANY($1)
             UNION ALL
-            SELECT tr.tag_id, tr.dependent_tag_id
-            FROM tag_relations tr
-            JOIN descendants d ON tr.dependent_tag_id = d.tag_id
-            WHERE tr.relation_type = 'PRIMARY'
+            SELECT t.id, t.parent_id FROM tags t
+            JOIN descendants d ON t.parent_id = d.id
         )
-        SELECT DISTINCT tag_id FROM descendants
+        SELECT DISTINCT id FROM descendants
         UNION
         SELECT unnest($1::int[])
-        """
-        , tag_ids,
+        """,
+        tag_ids,
     )
-    result = [r["tag_id"] for r in rows]
-    return sorted(result)
+    return sorted(r["id"] for r in rows)
 
 
 @router.post("/search/deep", response_model=DeepSearchResult)
@@ -220,22 +198,18 @@ async def deep_search(
         rows = await conn.fetch(
             """
             WITH RECURSIVE descendants AS (
-                SELECT tr.tag_id, tr.dependent_tag_id
-                FROM tag_relations tr
-                WHERE tr.dependent_tag_id = ANY($1) AND tr.relation_type = 'PRIMARY'
+                SELECT id, parent_id FROM tags WHERE parent_id = ANY($1)
                 UNION ALL
-                SELECT tr.tag_id, tr.dependent_tag_id
-                FROM tag_relations tr
-                JOIN descendants d ON tr.dependent_tag_id = d.tag_id
-                WHERE tr.relation_type = 'PRIMARY'
+                SELECT t.id, t.parent_id FROM tags t
+                JOIN descendants d ON t.parent_id = d.id
             )
-            SELECT DISTINCT tag_id FROM descendants
+            SELECT DISTINCT id FROM descendants
             UNION
             SELECT unnest($1::int[])
-            """
-            , search.tag_ids,
+            """,
+            search.tag_ids,
         )
-        expanded_tag_ids = sorted(set(r["tag_id"] for r in rows))
+        expanded_tag_ids = sorted(set(r["id"] for r in rows))
 
     bound_node_ids = []
 
@@ -247,8 +221,8 @@ async def deep_search(
             FROM registered_nodes rn
             JOIN clients c ON c.id = rn.client_id
             WHERE rn.node_tag_ids && $1::int[]
-            """
-            , expanded_tag_ids,
+            """,
+            expanded_tag_ids,
         )
         for br in bound_rows:
             bound_node_ids.append({
@@ -277,22 +251,18 @@ async def search_deep_nodes(
         rows = await conn.fetch(
             """
             WITH RECURSIVE descendants AS (
-                SELECT tr.tag_id, tr.dependent_tag_id
-                FROM tag_relations tr
-                WHERE tr.dependent_tag_id = ANY($1) AND tr.relation_type = 'PRIMARY'
+                SELECT id, parent_id FROM tags WHERE parent_id = ANY($1)
                 UNION ALL
-                SELECT tr.tag_id, tr.dependent_tag_id
-                FROM tag_relations tr
-                JOIN descendants d ON tr.dependent_tag_id = d.tag_id
-                WHERE tr.relation_type = 'PRIMARY'
+                SELECT t.id, t.parent_id FROM tags t
+                JOIN descendants d ON t.parent_id = d.id
             )
-            SELECT DISTINCT tag_id FROM descendants
+            SELECT DISTINCT id FROM descendants
             UNION
             SELECT unnest($1::int[])
-            """
-            , search.tag_ids,
+            """,
+            search.tag_ids,
         )
-        expanded_tag_ids = sorted(set(r["tag_id"] for r in rows))
+        expanded_tag_ids = sorted(set(r["id"] for r in rows))
 
     bound_nodes = {}
     if search.include_bound_nodes:
@@ -303,8 +273,8 @@ async def search_deep_nodes(
             FROM registered_nodes rn
             JOIN clients c ON c.id = rn.client_id
             WHERE rn.node_tag_ids && $1::int[]
-            """
-            , expanded_tag_ids,
+            """,
+            expanded_tag_ids,
         )
         for br in bound_rows:
             host = br["client_host"]
