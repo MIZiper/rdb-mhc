@@ -6,20 +6,24 @@ export async function fetch_tags_info(
     mh_host: string = "",
     all_tag_ids: number[],
 ): Promise<TagsCache> {
-    if (all_tag_ids.length === 0) return [];
-    const res = await fetch(`${mh_host}/api/tags/resolve`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(all_tag_ids),
-    });
-    if (!res.ok) throw Error("Failed to get data.");
-    const data: Record<string, any>[] = await res.json();
-    return Object.fromEntries(data.map((itm) => [itm.id, itm]));
+    if (all_tag_ids.length === 0) return {};
+    try {
+        const res = await fetch(`${mh_host}/api/tags/resolve`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(all_tag_ids),
+        });
+        if (!res.ok) return {};
+        const data: Record<string, any>[] = await res.json();
+        return Object.fromEntries(data.map((itm) => [itm.id, itm]));
+    } catch {
+        return {};
+    }
 }
 
 export function construct_tags_by_ids(tag_ids: number[], tags_cache: TagsCache): TagMeta[] {
     return tag_ids.map((e) => ({
         id: e,
-        name: tags_cache[e].name,
+        name: tags_cache[e]?.name ?? `@${e}`,
     }));
 }
