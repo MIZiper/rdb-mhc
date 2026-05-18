@@ -24,7 +24,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         f"http://localhost:{p}"
-        for p in range(5170, 5180)
+        for p in range(5130, 5140)
     ] + [
         f"http://localhost:{p}"
         for p in range(8030, 8040)
