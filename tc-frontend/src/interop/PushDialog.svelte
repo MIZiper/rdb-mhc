@@ -59,6 +59,10 @@
                 id: data.id,
                 update_time: data.updated_time,
                 tags: [],
+                data_type: data.data_type,
+                creator_name: data.creator_name,
+                creator_sub: data.creator_sub,
+                status: data.status,
             };
         } else {
             node_input_invalid = true;

@@ -60,6 +60,9 @@ class NodeDataRead(BaseModel):
     content: NodeData
     data_type: str | None
     tag_ids: list[int] = Field(default_factory=list)
+    creator_name: Optional[str] = None
+    creator_sub: Optional[str] = None
+    status: str = "draft"
 
 
 

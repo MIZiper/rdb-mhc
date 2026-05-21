@@ -3,7 +3,7 @@
 The basic implementation for RDB, with typed data.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Body
+from fastapi import APIRouter, Depends, HTTPException, Query, Body, status
 from typing import Optional
 import json
 from uuid import UUID
@@ -11,6 +11,7 @@ from asyncpg.connection import Connection
 from tc.db.connection import get_db
 from tc.models import NodeMetaRead, NodeMetaList
 from tc.models.typed_node import NodeData, NodeDataRead, NodeDataPayload, NodeTypedCreate
+from tc.auth.keycloak import get_current_user
 
 router = APIRouter(prefix="/nodes")
 
@@ -26,7 +27,8 @@ async def list_nodes_by_type(
     offset = (page - 1) * page_size
 
     sql = """
-        SELECT id, title, description, updated_at, content, content_type
+        SELECT id, title, description, updated_at, content, content_type,
+               creator_name, creator_sub, status
         FROM nodes
         WHERE content_type = $1
         ORDER BY updated_at DESC
@@ -55,6 +57,9 @@ async def list_nodes_by_type(
             updated_at=r["updated_at"],
             tag_ids=[],
             data_type=r["content_type"],
+            creator_name=r.get("creator_name"),
+            creator_sub=r.get("creator_sub"),
+            status=r.get("status", "draft"),
         )
         for r in nodes_rows
     }
@@ -67,13 +72,22 @@ async def list_nodes_by_type(
     return NodeMetaList(items=[result_map[nid] for nid in node_ids], total=count_result)
 
 @router.post("/typed", response_model=NodeMetaRead)
-async def add_node_with_content(node: NodeTypedCreate, conn: Connection = Depends(get_db)):
+async def add_node_with_content(
+    node: NodeTypedCreate,
+    conn: Connection = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
     row = await conn.fetchrow(
-        "INSERT INTO nodes (title, description, content, content_type) VALUES ($1, $2, $3, $4) RETURNING id, updated_at",
+        """INSERT INTO nodes (title, description, content, content_type,
+                              creator_sub, creator_name, status)
+           VALUES ($1, $2, $3, $4, $5, $6, 'draft')
+           RETURNING id, updated_at""",
         node.title,
         node.description,
         json.dumps(node.content),
         node.data_type,
+        user["sub"],
+        user["name"],
     )
     if not row:
         raise HTTPException(status_code=500, detail="Failed to create node")
@@ -90,13 +104,18 @@ async def add_node_with_content(node: NodeTypedCreate, conn: Connection = Depend
         updated_at=row["updated_at"],
         tag_ids=node.tag_ids,
         data_type=node.data_type,
+        creator_name=user["name"],
+        creator_sub=user["sub"],
+        status="draft",
     )
 
 
 @router.get("/{node_id}/data", response_model=NodeDataRead)
 async def get_node_data(node_id: UUID, conn: Connection = Depends(get_db)):
     row = await conn.fetchrow(
-        "SELECT id, title, description, content, content_type, updated_at FROM nodes WHERE id=$1", node_id
+        """SELECT id, title, description, content, content_type, updated_at,
+                  creator_name, creator_sub, status
+           FROM nodes WHERE id=$1""", node_id
     )
     if row is None:
         raise HTTPException(status_code=404, detail="Node not found")
@@ -115,6 +134,9 @@ async def get_node_data(node_id: UUID, conn: Connection = Depends(get_db)):
         data_type=row["content_type"],
         updated_at=row["updated_at"],
         tag_ids=tag_ids,
+        creator_name=row.get("creator_name"),
+        creator_sub=row.get("creator_sub"),
+        status=row.get("status", "draft"),
     )
 
 
@@ -123,12 +145,21 @@ async def patch_node_data(
     node_id: UUID,
     updates: dict = Body(..., description="Partial data updates"),
     conn: Connection = Depends(get_db),
+    user: dict = Depends(get_current_user),
 ):
     row = await conn.fetchrow(
-        "SELECT id, title, description, content, content_type, updated_at FROM nodes WHERE id=$1", node_id
+        """SELECT id, title, description, content, content_type, updated_at,
+                  creator_sub, creator_name, status
+           FROM nodes WHERE id=$1""", node_id
     )
     if row is None:
         raise HTTPException(status_code=404, detail="Node not found")
+
+    if row["creator_sub"] is not None and row["creator_sub"] != user["sub"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the creator can edit this node",
+        )
 
     existing_content = row["content"] or {}
 
@@ -156,7 +187,9 @@ async def patch_node_data(
 
     content_dict = validated_data.model_dump()
     updated_row = await conn.fetchrow(
-        "UPDATE nodes SET content=$1, content_type=$2, updated_at=NOW() WHERE id=$3 RETURNING updated_at, title, description",
+        """UPDATE nodes SET content=$1, content_type=$2, updated_at=NOW()
+           WHERE id=$3
+           RETURNING updated_at, title, description, creator_name, creator_sub, status""",
         content_dict,
         validated_data.type,
         node_id,
@@ -172,20 +205,37 @@ async def patch_node_data(
         data_type=validated_data.type,
         updated_at=updated_row["updated_at"],
         tag_ids=tag_ids,
+        creator_name=updated_row.get("creator_name"),
+        creator_sub=updated_row.get("creator_sub"),
+        status=updated_row.get("status", "draft"),
     )
 
 
 @router.post("/{node_id}/data")
 async def ingest_node_data(
-    node_id: UUID, payload: NodeDataPayload, conn: Connection = Depends(get_db)
+    node_id: UUID,
+    payload: NodeDataPayload,
+    conn: Connection = Depends(get_db),
+    user: dict = Depends(get_current_user),
 ):
-    existing = await conn.fetchrow("SELECT id FROM nodes WHERE id=$1", node_id)
+    existing = await conn.fetchrow(
+        """SELECT id, creator_sub, creator_name, status
+           FROM nodes WHERE id=$1""", node_id
+    )
     if existing is None:
         raise HTTPException(status_code=404, detail="Node not found")
 
+    if existing["creator_sub"] is not None and existing["creator_sub"] != user["sub"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the creator can update this node",
+        )
+
     content_dict = payload.content.model_dump()
     row = await conn.fetchrow(
-        "UPDATE nodes SET content=$1, content_type=$2, updated_at=NOW() WHERE id=$3 RETURNING updated_at, title, description",
+        """UPDATE nodes SET content=$1, content_type=$2, updated_at=NOW()
+           WHERE id=$3
+           RETURNING updated_at, title, description, creator_name, creator_sub, status""",
         content_dict,
         payload.content.type,
         node_id,
@@ -201,4 +251,7 @@ async def ingest_node_data(
         data_type=payload.content.type,
         updated_at=row["updated_at"],
         tag_ids=tag_ids,
+        creator_name=row.get("creator_name"),
+        creator_sub=row.get("creator_sub"),
+        status=row.get("status", "draft"),
     )

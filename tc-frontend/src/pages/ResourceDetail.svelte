@@ -31,16 +31,19 @@
         const tags_cache = await fetch_tags_info(metahub_host, data.tag_ids);
 
         item = {
-            id: data.name,
+            id: data.id,
             title: data.title,
             description: data.description,
-            update_time: data.update_date,
+            update_time: new Date(data.updated_at),
             tags: construct_tags_by_ids(data.tag_ids, tags_cache),
             data_type: data.data_type,
             content: data.content,
+            creator_name: data.creator_name,
+            creator_sub: data.creator_sub,
+            status: data.status,
         };
 
-        processor = registry.getProcessor(item.data_type);
+        processor = registry.getProcessor(item.data_type || "");
     });
 </script>
 

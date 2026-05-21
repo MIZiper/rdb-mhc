@@ -14,6 +14,7 @@
         Row,
     } from "@sveltestrap/sveltestrap";
     import type { ItemMeta } from "../schema";
+    import { authFetch } from "./auth";
 
     let item: ItemMeta = $state({
         title: "",
@@ -22,6 +23,9 @@
         update_time: new Date(),
         tags: [],
         data_type: "",
+        creator_name: null,
+        creator_sub: null,
+        status: "draft",
     });
     let tagSelectorOpen: boolean = $state(false);
 
@@ -41,7 +45,7 @@
         saving = true;
         errorMsg = "";
         try {
-            const res = await fetch(`/api/nodes/`, {
+            const res = await authFetch(`/api/nodes/`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

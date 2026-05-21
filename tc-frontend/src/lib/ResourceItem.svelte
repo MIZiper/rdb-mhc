@@ -29,6 +29,26 @@
         return `hsl(${hue} 65% 45%)`;
     }
 
+    function statusColor(status: string): string {
+        switch (status) {
+            case "draft": return "secondary";
+            case "pending_review": return "warning";
+            case "published": return "success";
+            case "archived": return "dark";
+            default: return "secondary";
+        }
+    }
+
+    function statusLabel(status: string): string {
+        switch (status) {
+            case "draft": return "Draft";
+            case "pending_review": return "In Review";
+            case "published": return "Published";
+            case "archived": return "Archived";
+            default: return status;
+        }
+    }
+
     const barTextColor = "white";
 </script>
 
@@ -36,6 +56,14 @@
     <CardBody>
         <CardSubtitle style="border-left: 4px solid gray; padding-left: 6px;">
             <NavLink href="/items/{item.id}">{item.title}</NavLink>
+            {#if item.status}
+                <Badge color={statusColor(item.status)} class="ms-2">
+                    {statusLabel(item.status)}
+                </Badge>
+            {/if}
+            {#if item.creator_name}
+                <span class="creator-name">{item.creator_name}</span>
+            {/if}
         </CardSubtitle>
         <p class="update_date">
             Update: {item.update_time.toLocaleDateString()}
@@ -105,5 +133,11 @@
         right: 5px;
         color: gray;
         font-size: smaller;
+    }
+
+    .creator-name {
+        color: gray;
+        font-size: smaller;
+        margin-left: 8px;
     }
 </style>

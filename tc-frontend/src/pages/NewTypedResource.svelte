@@ -3,6 +3,7 @@
     import { BaseProcessor, registry } from "../lib/processor";
     import NewResource from "../lib/NewResource.svelte";
     import type { ItemMeta } from "../schema";
+    import { authFetch, isAuthenticated } from "../lib/auth";
 
     let selected: string | null = $state(null);
     let processor: BaseProcessor | null = $state(null);
@@ -16,6 +17,10 @@
     });
 
     async function addResource(item: ItemMeta) {
+        if (!isAuthenticated()) {
+            errorMsg = "Please login to create resources";
+            return;
+        }
         if (!processor?.editor || !editorInstance) {
             errorMsg = "Editor not available";
             return;
@@ -25,7 +30,7 @@
         successMsg = "";
         try {
             const content = editorInstance.getContent();
-            const res = await fetch(`/api/nodes/typed`, {
+            const res = await authFetch(`/api/nodes/typed`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

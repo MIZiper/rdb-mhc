@@ -6,7 +6,10 @@ export interface ItemMeta {
     description: string
     update_time: Date
     tags: TagMeta[]
-    data_type: string = null
+    data_type: string | null
+    creator_name: string | null
+    creator_sub: string | null
+    status: string
 }
 
 export interface ItemDetail extends ItemMeta{

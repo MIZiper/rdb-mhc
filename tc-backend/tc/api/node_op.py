@@ -4,15 +4,31 @@ In this handler, it provides basic operations on nodes.
 The nodes are data irrelevant, meaning client can have its own data structure.
 """
 
-from fastapi import APIRouter, Depends, Query, Body, HTTPException
+from fastapi import APIRouter, Depends, Query, Body, HTTPException, status
 from typing import Optional
 from uuid import UUID
 from asyncpg.connection import Connection
 from tc.db.connection import get_db
-from tc.models import NodeMetaRead, NodeMetaList, NodeCreate, NodeUpdate
+from tc.models import NodeMetaRead, NodeMetaList, NodeCreate, NodeUpdate, NodeStatusUpdate
 from tc.services.metahub_client import expand_tag_ids
+from tc.auth.keycloak import get_current_user, get_optional_user, require_reviewer
 
 router = APIRouter(prefix="/nodes")
+
+
+def _row_to_meta(r, tag_ids: list[int] = None) -> NodeMetaRead:
+    return NodeMetaRead(
+        id=r["id"],
+        title=r["title"],
+        description=r["description"],
+        updated_at=r["updated_at"],
+        tag_ids=tag_ids or [],
+        data_type=r["content_type"],
+        creator_name=r.get("creator_name"),
+        creator_sub=r.get("creator_sub"),
+        status=r.get("status", "draft"),
+    )
+
 
 @router.get("/", response_model=NodeMetaList)
 async def list_nodes(
@@ -20,16 +36,11 @@ async def list_nodes(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, le=100),
     q: Optional[str] = Query(None, description="Search by content"),
+    user: Optional[dict] = Depends(get_optional_user),
 ):
     offset = (page - 1) * page_size
 
     if q and q.strip():
-        # --- 搜索模式 ---
-        # xx_tsquery:
-        #   - to_tsquery, most flexible but cannot 'a b'
-        #   - plainto_tsquery, convert 'a b' to 'a & b', but 'a | b' also to 'a & b'
-        #   - websearch_to_tsquery, 'a b' to 'a & b', 'a or b' to 'a | b', but no 'a:*'
-        # 按相关性排序
         sql = """
             SELECT
                 id,
@@ -37,6 +48,9 @@ async def list_nodes(
                 description,
                 updated_at,
                 to_jsonb(n) ->> 'content_type' AS content_type,
+                to_jsonb(n) ->> 'creator_name' AS creator_name,
+                to_jsonb(n) ->> 'creator_sub' AS creator_sub,
+                to_jsonb(n) ->> 'status' AS status,
                 ts_headline('english', title, query, 'StartSel=<strong>, StopSel=</strong>') as title_highlight,
                 ts_rank(search_vector, query) as relevance
             FROM nodes n, to_tsquery('english', $1) as query
@@ -53,8 +67,6 @@ async def list_nodes(
         count_result = await conn.fetchval(count_sql, q)
 
     else:
-        # --- 默认浏览模式 ---
-        # 按时间倒序排序，不需要计算 ts_rank 和 headline，性能更高
         sql = """
             SELECT
                 id,
@@ -62,6 +74,9 @@ async def list_nodes(
                 description,
                 updated_at,
                 to_jsonb(n) ->> 'content_type' AS content_type,
+                to_jsonb(n) ->> 'creator_name' AS creator_name,
+                to_jsonb(n) ->> 'creator_sub' AS creator_sub,
+                to_jsonb(n) ->> 'status' AS status,
                 NULL as title_highlight,
                 NULL as relevance
             FROM nodes n
@@ -83,17 +98,7 @@ async def list_nodes(
     """
     tags_rows = await conn.fetch(tags_query, node_ids)
 
-    result_map = {
-        r["id"]: NodeMetaRead(
-            id=r["id"],
-            title=r["title"],
-            description=r["description"],
-            updated_at=r["updated_at"],
-            tag_ids=[],
-            data_type=r["content_type"],
-        )
-        for r in nodes_rows
-    }
+    result_map = {r["id"]: _row_to_meta(r) for r in nodes_rows}
 
     for tag_row in tags_rows:
         nid = tag_row["node_id"]
@@ -131,6 +136,9 @@ async def search_nodes_by_tags(
             n.description,
             n.updated_at,
             to_jsonb(n) ->> 'content_type' AS content_type,
+            to_jsonb(n) ->> 'creator_name' AS creator_name,
+            to_jsonb(n) ->> 'creator_sub' AS creator_sub,
+            to_jsonb(n) ->> 'status' AS status,
             COUNT(nt.tag_id) AS match_count,
             (
                 SELECT array_agg(t2.tag_id)
@@ -148,17 +156,7 @@ async def search_nodes_by_tags(
     rows = await conn.fetch(query, *args)
 
     return NodeMetaList(
-        items=[
-            NodeMetaRead(
-                id=r["id"],
-                title=r["title"],
-                description=r["description"],
-                updated_at=r["updated_at"],
-                tag_ids=r["tag_ids"],
-                data_type=r["content_type"],
-            )
-            for r in rows
-        ],
+        items=[_row_to_meta(r, r["tag_ids"]) for r in rows],
         total=len(rows),
     )
 
@@ -166,7 +164,9 @@ async def search_nodes_by_tags(
 @router.get("/{node_id}/meta", response_model=NodeMetaRead)
 async def get_node_meta(node_id: UUID, conn: Connection = Depends(get_db)):
     row = await conn.fetchrow(
-        "SELECT id, title, description, updated_at, content_type FROM nodes WHERE id=$1;",
+        """SELECT id, title, description, updated_at, content_type,
+                  creator_name, creator_sub, status
+           FROM nodes WHERE id=$1""",
         node_id,
     )
     if row is None:
@@ -175,14 +175,7 @@ async def get_node_meta(node_id: UUID, conn: Connection = Depends(get_db)):
         "SELECT tag_id FROM node_tags WHERE node_id=$1", node_id
     )
     tag_ids = [r["tag_id"] for r in tags_rows]
-    return NodeMetaRead(
-        id=row["id"],
-        tag_ids=tag_ids,
-        title=row["title"],
-        description=row["description"],
-        updated_at=row["updated_at"],
-        data_type=row["content_type"],
-    )
+    return _row_to_meta(row, tag_ids)
 
 
 @router.patch("/{node_id}/meta", response_model=NodeMetaRead)
@@ -190,12 +183,20 @@ async def update_node_meta(
     node_id: UUID,
     node: NodeUpdate,
     conn: Connection = Depends(get_db),
+    user: dict = Depends(get_current_user),
 ):
     existing = await conn.fetchrow(
-        "SELECT id FROM nodes WHERE id=$1", node_id
+        """SELECT id, creator_sub, creator_name, status, content_type
+           FROM nodes WHERE id=$1""", node_id
     )
     if existing is None:
         raise HTTPException(status_code=404, detail="Node not found")
+
+    if existing["creator_sub"] is not None and existing["creator_sub"] != user["sub"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the creator can edit this node",
+        )
 
     sets = []
     args = []
@@ -209,14 +210,22 @@ async def update_node_meta(
         sets.append(f"description=${idx}")
         args.append(node.description)
         idx += 1
+    if node.status is not None:
+        sets.append(f"status=${idx}")
+        args.append(node.status)
+        idx += 1
     if sets:
         sets.append("updated_at=NOW()")
-        sql = f"UPDATE nodes SET {', '.join(sets)} WHERE id=${idx} RETURNING id, title, description, updated_at, content_type"
+        sql = f"""UPDATE nodes SET {', '.join(sets)} WHERE id=${idx}
+                  RETURNING id, title, description, updated_at, content_type,
+                            creator_name, creator_sub, status"""
         args.append(node_id)
         row = await conn.fetchrow(sql, *args)
     else:
         row = await conn.fetchrow(
-            "SELECT id, title, description, updated_at, content_type FROM nodes WHERE id=$1",
+            """SELECT id, title, description, updated_at, content_type,
+                      creator_name, creator_sub, status
+               FROM nodes WHERE id=$1""",
             node_id,
         )
 
@@ -234,22 +243,23 @@ async def update_node_meta(
     )
     tag_ids = [r["tag_id"] for r in tags_rows]
 
-    return NodeMetaRead(
-        id=node_id,
-        title=row["title"],
-        description=row["description"],
-        updated_at=row["updated_at"],
-        tag_ids=tag_ids,
-        data_type=row["content_type"],
-    )
+    return _row_to_meta(row, tag_ids)
 
 
 @router.post("/", response_model=NodeMetaRead)
-async def add_node_with_tags(node: NodeCreate, conn: Connection = Depends(get_db)):
+async def add_node_with_tags(
+    node: NodeCreate,
+    conn: Connection = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
     row = await conn.fetchrow(
-        "INSERT INTO nodes (title, description) VALUES ($1, $2) RETURNING id, updated_at",
+        """INSERT INTO nodes (title, description, creator_sub, creator_name, status)
+           VALUES ($1, $2, $3, $4, 'draft')
+           RETURNING id, updated_at""",
         node.title,
         node.description,
+        user["sub"],
+        user["name"],
     )
     if not row:
         raise HTTPException(status_code=500, detail="Failed to create node")
@@ -266,4 +276,91 @@ async def add_node_with_tags(node: NodeCreate, conn: Connection = Depends(get_db
         updated_at=row["updated_at"],
         tag_ids=node.tag_ids,
         data_type=None,
+        creator_name=user["name"],
+        creator_sub=user["sub"],
+        status="draft",
     )
+
+
+@router.get("/mine", response_model=NodeMetaList)
+async def list_my_nodes(
+    conn: Connection = Depends(get_db),
+    user: dict = Depends(get_current_user),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, le=100),
+    status_filter: Optional[str] = Query(
+        None, alias="status", description="Filter by status"
+    ),
+):
+    offset = (page - 1) * page_size
+
+    status_where = ""
+    status_params = []
+    if status_filter:
+        status_where = "AND status = $3"
+        status_params = [status_filter]
+
+    sql = f"""
+        SELECT
+            id, title, description, updated_at,
+            to_jsonb(n) ->> 'content_type' AS content_type,
+            to_jsonb(n) ->> 'creator_name' AS creator_name,
+            to_jsonb(n) ->> 'creator_sub' AS creator_sub,
+            to_jsonb(n) ->> 'status' AS status
+        FROM nodes n
+        WHERE creator_sub = $1 {status_where}
+        ORDER BY updated_at DESC
+        LIMIT $2 OFFSET {offset + 2}
+    """
+    params = [user["sub"], page_size] + status_params
+
+    count_sql = f"""
+        SELECT COUNT(*) FROM nodes WHERE creator_sub = $1 {status_where}
+    """
+    count_params = [user["sub"]] + status_params
+    count_result = await conn.fetchval(count_sql, *count_params)
+
+    nodes_rows = await conn.fetch(sql, *params)
+    node_ids = [row["id"] for row in nodes_rows]
+
+    tags_query = """
+        SELECT node_id, tag_id FROM node_tags WHERE node_id = ANY($1)
+    """
+    tags_rows = await conn.fetch(tags_query, node_ids)
+
+    result_map = {r["id"]: _row_to_meta(r) for r in nodes_rows}
+    for tag_row in tags_rows:
+        nid = tag_row["node_id"]
+        if nid in result_map:
+            result_map[nid].tag_ids.append(tag_row["tag_id"])
+
+    return NodeMetaList(items=[result_map[nid] for nid in node_ids], total=count_result)
+
+
+@router.patch("/{node_id}/status", response_model=NodeMetaRead)
+async def update_node_status(
+    node_id: UUID,
+    body: NodeStatusUpdate,
+    conn: Connection = Depends(get_db),
+    user: dict = Depends(require_reviewer),
+):
+    existing = await conn.fetchrow(
+        """SELECT id, creator_sub
+           FROM nodes WHERE id=$1""", node_id
+    )
+    if existing is None:
+        raise HTTPException(status_code=404, detail="Node not found")
+
+    row = await conn.fetchrow(
+        """UPDATE nodes SET status=$1, updated_at=NOW()
+           WHERE id=$2
+           RETURNING id, title, description, updated_at, content_type,
+                     creator_name, creator_sub, status""",
+        body.status,
+        node_id,
+    )
+    tags_rows = await conn.fetch(
+        "SELECT tag_id FROM node_tags WHERE node_id=$1", node_id
+    )
+    tag_ids = [r["tag_id"] for r in tags_rows]
+    return _row_to_meta(row, tag_ids)
