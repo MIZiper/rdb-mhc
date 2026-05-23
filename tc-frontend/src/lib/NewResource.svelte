@@ -13,8 +13,11 @@
         Label,
         Row,
     } from "@sveltestrap/sveltestrap";
+    import { getContext } from "svelte";
     import type { ItemMeta } from "../schema";
     import { authFetch } from "./auth";
+
+    const router: any = getContext("router");
 
     let item: ItemMeta = $state({
         title: "",
@@ -59,9 +62,8 @@
                 const err = await res.json().catch(() => ({}));
                 errorMsg = err.detail || "Failed to create resource";
             } else {
-                item.title = "";
-                item.description = "";
-                item.tags = [];
+                const data = await res.json();
+                router.navigate(`/items/${data.id}`);
             }
         } catch (e: any) {
             errorMsg = e.message;

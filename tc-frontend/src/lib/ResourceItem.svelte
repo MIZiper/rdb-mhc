@@ -56,17 +56,15 @@
     <CardBody>
         <CardSubtitle style="border-left: 4px solid gray; padding-left: 6px;">
             <NavLink href="/items/{item.id}">{item.title}</NavLink>
-            {#if item.status}
-                <Badge color={statusColor(item.status)} class="ms-2">
-                    {statusLabel(item.status)}
-                </Badge>
-            {/if}
-            {#if item.creator_name}
-                <span class="creator-name">{item.creator_name}</span>
-            {/if}
         </CardSubtitle>
         <p class="update_date">
-            Update: {item.update_time.toLocaleDateString()}
+            {#if item.creator_name}
+                <span class="creator">{item.creator_name}</span>
+            {/if}
+            {#if item.status}
+                <Badge color={statusColor(item.status)} class="ms-1">{statusLabel(item.status)}</Badge>
+            {/if}
+            {item.update_time.toLocaleDateString()}
         </p>
         <CardText>{item.description}</CardText>
     </CardBody>
@@ -133,11 +131,8 @@
         right: 5px;
         color: gray;
         font-size: smaller;
-    }
-
-    .creator-name {
-        color: gray;
-        font-size: smaller;
-        margin-left: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
     }
 </style>

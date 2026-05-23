@@ -1,9 +1,12 @@
 <script lang="ts">
     import { Col, Container, Row } from "@sveltestrap/sveltestrap";
+    import { getContext } from "svelte";
     import { BaseProcessor, registry } from "../lib/processor";
     import NewResource from "../lib/NewResource.svelte";
     import type { ItemMeta } from "../schema";
     import { authFetch, isAuthenticated } from "../lib/auth";
+
+    const router: any = getContext("router");
 
     let selected: string | null = $state(null);
     let processor: BaseProcessor | null = $state(null);
@@ -46,7 +49,8 @@
                 const err = await res.json().catch(() => ({}));
                 errorMsg = err.detail || "Failed to create typed resource";
             } else {
-                successMsg = "Resource created successfully!";
+                const data = await res.json();
+                router.navigate(`/items/${data.id}`);
             }
         } catch (e: any) {
             errorMsg = e.message;

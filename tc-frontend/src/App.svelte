@@ -1,6 +1,5 @@
 <script lang="ts">
   import {
-    Button,
     Nav,
     Navbar,
     NavbarBrand,
@@ -61,20 +60,16 @@
       <NavItem>
         <NavLink style="color: white;" href="/dev-test">Test</NavLink>
       </NavItem>
-    </Nav>
-    <Nav style="margin-left: auto;">
       {#if auth.authenticated}
         <NavItem>
-          <span class="nav-link" style="color: white; cursor: default;">
-            {auth.user?.name || auth.user?.sub}
-          </span>
+          <span class="nav-link username">{auth.user?.name || auth.user?.sub}</span>
         </NavItem>
         <NavItem>
-          <Button size="sm" color="light" onclick={doLogout}>Logout</Button>
+          <NavLink style="color: white;" onclick={doLogout}>Logout</NavLink>
         </NavItem>
       {:else}
         <NavItem>
-          <Button size="sm" color="light" onclick={doLogin}>Login</Button>
+          <NavLink style="color: white;" onclick={doLogin}>Login</NavLink>
         </NavItem>
       {/if}
     </Nav>
@@ -82,3 +77,9 @@
 
   <Router />
 </main>
+
+<style>
+  .username {
+    color: #ffeaa7;
+  }
+</style>
