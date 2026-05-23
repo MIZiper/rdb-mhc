@@ -3,9 +3,6 @@
 
 interface RuntimeConfig {
     MH_HOST?: string;
-    KC_URL?: string;
-    KC_REALM?: string;
-    KC_CLIENT_ID?: string;
     [key: string]: string | undefined;
 }
 

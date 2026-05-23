@@ -1,9 +1,14 @@
 import Keycloak from "keycloak-js";
 import { getContext, setContext } from "svelte";
-import { getConfig } from "../utils/GetRuntimeEnv";
 
 let _keycloak: Keycloak | null = null;
 let _initialized = false;
+
+export interface KeycloakConfig {
+    url: string;
+    realm: string;
+    clientId: string;
+}
 
 export interface AuthState {
     authenticated: boolean;
@@ -11,18 +16,10 @@ export interface AuthState {
     token: string | null;
 }
 
-export function initKeycloak(): Keycloak {
+export function initKeycloak(config: KeycloakConfig): Keycloak {
     if (_keycloak) return _keycloak;
 
-    const url = getConfig("KC_URL") || "";
-    const realm = getConfig("KC_REALM") || "";
-    const clientId = getConfig("KC_CLIENT_ID") || "";
-
-    _keycloak = new Keycloak({
-        url,
-        realm,
-        clientId,
-    });
+    _keycloak = new Keycloak(config);
 
     _keycloak.onTokenExpired = () => {
         _keycloak!.updateToken(30).catch(() => {
@@ -33,8 +30,8 @@ export function initKeycloak(): Keycloak {
     return _keycloak;
 }
 
-export async function checkAuth(): Promise<AuthState> {
-    const kc = initKeycloak();
+export async function checkAuth(config: KeycloakConfig): Promise<AuthState> {
+    const kc = initKeycloak(config);
 
     if (_initialized) {
         return getAuthState();
@@ -55,13 +52,13 @@ export async function checkAuth(): Promise<AuthState> {
     }
 }
 
-export async function login(): Promise<void> {
-    const kc = initKeycloak();
+export async function login(config: KeycloakConfig): Promise<void> {
+    const kc = initKeycloak(config);
     await kc.login({ redirectUri: window.location.origin + "/" });
 }
 
-export async function logout(): Promise<void> {
-    const kc = initKeycloak();
+export async function logout(config: KeycloakConfig): Promise<void> {
+    const kc = initKeycloak(config);
     await kc.logout({ redirectUri: window.location.href });
 }
 

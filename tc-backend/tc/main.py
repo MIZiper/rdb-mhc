@@ -6,6 +6,7 @@ import os
 from tc.api.node_op import router as node_router
 from tc.api.node_typed import router as typed_router
 from tc.api.node_push import router as push_router
+from tc.api.config import router as config_router
 from tc.services.metahub_client import close_mh_client
 
 metahub_host = os.getenv("TC_METAHUB", "localhost:8033")
@@ -34,6 +35,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(config_router, prefix="/api")
 app.include_router(node_router, prefix="/api")
 app.include_router(typed_router, prefix="/api")
 app.include_router(push_router, prefix="/api")

@@ -78,6 +78,9 @@
 			"options": {
 				"env": {
 					"POSTGRES_PORT": "5430",
+					"KC_SERVER_URL": "http://localhost:8080",
+					"KC_REALM": "miz",
+					"KC_CLIENT_ID": "tc-frontend",
 				}
 			},
 			"command": [

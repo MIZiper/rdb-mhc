@@ -17,7 +17,7 @@
   import { BaseProcessor, registry } from "./lib/processor.js";
   import BaseViewer from "./modules/BaseViewer.svelte";
   import BaseEditor from "./modules/BaseEditor.svelte";
-  import { checkAuth, login, logout, isAuthenticated, getAuthState, setAuthContext } from "./lib/auth.js";
+  import { checkAuth, login, logout, setAuthContext, type KeycloakConfig } from "./lib/auth.js";
 
   setContext("mh_host", getConfig("MH_HOST"));
   setContext("router", router);
@@ -27,14 +27,18 @@
   );
 
   let auth = $state({ authenticated: false, user: null as { sub: string; name: string } | null, token: null as string | null });
+  let kcConfig: KeycloakConfig | null = $state(null);
 
   onMount(async () => {
-    auth = await checkAuth();
+    const config = await fetch("/api/config").then(r => r.json());
+    // setContext("mh_host", config.mh_host || getConfig("MH_HOST"));
+    kcConfig = { url: config.kc_url, realm: config.kc_realm, clientId: config.kc_client_id };
+    auth = await checkAuth(kcConfig);
     setAuthContext(auth);
   });
 
-  async function doLogin() { await login(); }
-  async function doLogout() { await logout(); }
+  async function doLogin() { if (kcConfig) await login(kcConfig); }
+  async function doLogout() { if (kcConfig) await logout(kcConfig); }
 </script>
 
 <Styles />
