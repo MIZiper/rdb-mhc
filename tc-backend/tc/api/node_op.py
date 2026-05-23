@@ -294,11 +294,16 @@ async def list_my_nodes(
 ):
     offset = (page - 1) * page_size
 
-    status_where = ""
-    status_params = []
     if status_filter:
         status_where = "AND status = $3"
-        status_params = [status_filter]
+        params = [user["sub"], page_size, status_filter]
+        count_where = "AND status = $2"
+        count_params = [user["sub"], status_filter]
+    else:
+        status_where = ""
+        params = [user["sub"], page_size]
+        count_where = ""
+        count_params = [user["sub"]]
 
     sql = f"""
         SELECT
@@ -310,14 +315,12 @@ async def list_my_nodes(
         FROM nodes n
         WHERE creator_sub = $1 {status_where}
         ORDER BY updated_at DESC
-        LIMIT $2 OFFSET {offset + 2}
+        LIMIT $2 OFFSET {offset}
     """
-    params = [user["sub"], page_size] + status_params
 
     count_sql = f"""
-        SELECT COUNT(*) FROM nodes WHERE creator_sub = $1 {status_where}
+        SELECT COUNT(*) FROM nodes WHERE creator_sub = $1 {count_where}
     """
-    count_params = [user["sub"]] + status_params
     count_result = await conn.fetchval(count_sql, *count_params)
 
     nodes_rows = await conn.fetch(sql, *params)

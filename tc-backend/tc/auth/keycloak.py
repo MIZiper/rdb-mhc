@@ -1,15 +1,19 @@
 import os
 import time
+import logging
 import httpx
 from typing import Optional
 from jose import jwt, JWTError
-from jose.jwk import RSAKey
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+logger = logging.getLogger(__name__)
 
 KC_SERVER_URL = os.getenv("KC_SERVER_URL", "")
 KC_REALM = os.getenv("KC_REALM", "")
 KC_CLIENT_ID = os.getenv("KC_CLIENT_ID", "")
+
+_ISSUER = f"{KC_SERVER_URL.rstrip('/')}/realms/{KC_REALM}" if KC_SERVER_URL and KC_REALM else ""
 
 _CERNS_CACHE: dict = {}
 _CERNS_EXPIRY: float = 0.0
@@ -78,23 +82,15 @@ async def _decode_token(token: str) -> dict:
         )
 
     try:
-        public_key = RSAKey(key_dict, algorithm=unverified_header.get("alg", "RS256"))
-    except Exception:
-        await _fetch_jwks.__wrapped__()  # force refresh
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Unable to parse signing key",
-        )
-
-    try:
         payload = jwt.decode(
             token,
-            public_key.key,
+            key_dict,
             algorithms=[unverified_header.get("alg", "RS256")],
-            audience=KC_CLIENT_ID,
-            options={"verify_exp": True, "verify_aud": True},
+            issuer=_ISSUER,
+            options={"verify_exp": True, "verify_aud": False, "verify_iss": True},
         )
-    except JWTError:
+    except JWTError as e:
+        logger.warning("JWT decode failed: %s", e)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
