@@ -16,19 +16,20 @@
   import { BaseProcessor, registry } from "./lib/processor.js";
   import BaseViewer from "./modules/BaseViewer.svelte";
   import BaseEditor from "./modules/BaseEditor.svelte";
+  import BaseTypeViewer from "./modules/BaseTypeViewer.svelte";
   import TabularEditor from "./modules/TabularEditor.svelte";
   import TabularViewer from "./modules/TabularViewer.svelte";
-  import TypeTabularViewer from "./modules/TypeTabularViewer.svelte";
+  import TabularTypeViewer from "./modules/TabularTypeViewer.svelte";
   import { checkAuth, login, logout, setAuthContext, type KeycloakConfig } from "./lib/auth.js";
 
   setContext("mh_host", getConfig("MH_HOST"));
   setContext("router", router);
 
   registry.register(
-    new BaseProcessor("Base.v00", "Base Item", BaseViewer, BaseEditor),
+    new BaseProcessor("Base.v00", "Base Item", BaseViewer, BaseEditor, BaseTypeViewer),
   );
   registry.register(
-    new BaseProcessor("Tabular.v00", "Tabular Data", TabularViewer, TabularEditor, TypeTabularViewer),
+    new BaseProcessor("Tabular.v00", "Tabular Data", TabularViewer, TabularEditor, TabularTypeViewer),
   );
 
   let auth = $state({ authenticated: false, user: null as { sub: string; name: string } | null, token: null as string | null });
