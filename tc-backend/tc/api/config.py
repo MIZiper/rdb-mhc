@@ -5,7 +5,7 @@ from tc.auth.keycloak import KC_SERVER_URL, KC_REALM, KC_CLIENT_ID
 router = APIRouter(prefix="/config")
 
 
-@router.get("/")
+@router.get("")
 async def get_config():
     return {
         "kc_url": KC_SERVER_URL,

@@ -5,7 +5,6 @@ The basic implementation for RDB, with typed data.
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Body, status
 from typing import Optional
-import json
 from uuid import UUID
 from asyncpg.connection import Connection
 from tc.db.connection import get_db
@@ -84,7 +83,7 @@ async def add_node_with_content(
            RETURNING id, updated_at""",
         node.title,
         node.description,
-        json.dumps(node.content),
+        node.content,
         node.data_type,
         user["sub"],
         user["name"],
@@ -130,7 +129,7 @@ async def get_node_data(node_id: UUID, conn: Connection = Depends(get_db)):
         id=row["id"],
         title=row["title"],
         description=row["description"],
-        content=json.loads(content),
+        content=content,
         data_type=row["content_type"],
         updated_at=row["updated_at"],
         tag_ids=tag_ids,

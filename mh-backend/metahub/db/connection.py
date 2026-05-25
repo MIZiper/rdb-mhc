@@ -1,3 +1,4 @@
+import json
 import os
 
 import asyncpg
@@ -12,6 +13,15 @@ DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
 DB_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
 
 
+async def _init_connection(conn):
+    await conn.set_type_codec(
+        "jsonb",
+        encoder=json.dumps,
+        decoder=json.loads,
+        schema="pg_catalog",
+    )
+
+
 async def init_pool():
     global pool
 
@@ -21,6 +31,7 @@ async def init_pool():
         database=DB_NAME,
         host=DB_HOST,
         port=DB_PORT,
+        init=_init_connection,
     )
 
 
