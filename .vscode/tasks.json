@@ -2,7 +2,7 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "(dev) Start MetaHub PostgreSQL",
+			"label": "(MetaHub) PostgreSQL",
 			"type": "shell",
 			"problemMatcher": [],
 			"command": [
@@ -15,7 +15,7 @@
 			],
 		},
 		{
-			"label": "(dev) Start MetaHub backend",
+			"label": "(MetaHub) backend",
 			"type": "shell",
 			"problemMatcher": "$python",
 			"options": {
@@ -32,7 +32,7 @@
 			]
 		},
 		{
-			"label": "(dev) Start MetaHub frontend",
+			"label": "(MetaHub) frontend",
 			"type": "shell",
 			"problemMatcher": "$tsc",
 			"options": {
@@ -52,14 +52,14 @@
 			"label": "🚀 MetaHub",
 			"dependsOrder": "parallel",
 			"dependsOn": [
-				"(dev) Start MetaHub PostgreSQL",
-				"(dev) Start MetaHub backend",
-				"(dev) Start MetaHub frontend",
+				"(MetaHub) PostgreSQL",
+				"(MetaHub) backend",
+				"(MetaHub) frontend",
 			],
 			"group": "build"
 		},
 		{
-			"label": "(dev) Start TClient PostgreSQL",
+			"label": "(TClient) PostgreSQL",
 			"type": "shell",
 			"problemMatcher": [],
 			"command": [
@@ -72,7 +72,7 @@
 			],
 		},
 		{
-			"label": "(dev) Start TClient backend",
+			"label": "(TClient) backend",
 			"type": "shell",
 			"problemMatcher": "$python",
 			"options": {
@@ -92,7 +92,7 @@
 			]
 		},
 		{
-			"label": "(dev) Start TClient frontend",
+			"label": "(TClient) frontend",
 			"type": "shell",
 			"problemMatcher": "$tsc",
 			"options": {
@@ -112,9 +112,9 @@
 			"label": "🚀 TClient",
 			"dependsOrder": "parallel",
 			"dependsOn": [
-				"(dev) Start TClient PostgreSQL",
-				"(dev) Start TClient backend",
-				"(dev) Start TClient frontend",
+				"(TClient) PostgreSQL",
+				"(TClient) backend",
+				"(TClient) frontend",
 			],
 			"group": "build"
 		},
@@ -122,12 +122,12 @@
 			"label": "🚀 Full MHC",
 			"dependsOrder": "parallel",
 			"dependsOn": [
-				"(dev) Start MetaHub PostgreSQL",
-				"(dev) Start MetaHub backend",
-				"(dev) Start MetaHub frontend",
-				"(dev) Start TClient PostgreSQL",
-				"(dev) Start TClient backend",
-				"(dev) Start TClient frontend",
+				"(MetaHub) PostgreSQL",
+				"(MetaHub) backend",
+				"(MetaHub) frontend",
+				"(TClient) PostgreSQL",
+				"(TClient) backend",
+				"(TClient) frontend",
 			],
 			"group": "build"
 		}
