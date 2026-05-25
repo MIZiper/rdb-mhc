@@ -16,6 +16,9 @@
   import { BaseProcessor, registry } from "./lib/processor.js";
   import BaseViewer from "./modules/BaseViewer.svelte";
   import BaseEditor from "./modules/BaseEditor.svelte";
+  import TabularEditor from "./modules/TabularEditor.svelte";
+  import TabularViewer from "./modules/TabularViewer.svelte";
+  import TypeTabularViewer from "./modules/TypeTabularViewer.svelte";
   import { checkAuth, login, logout, setAuthContext, type KeycloakConfig } from "./lib/auth.js";
 
   setContext("mh_host", getConfig("MH_HOST"));
@@ -23,6 +26,9 @@
 
   registry.register(
     new BaseProcessor("Base.v00", "Base Item", BaseViewer, BaseEditor),
+  );
+  registry.register(
+    new BaseProcessor("Tabular.v00", "Tabular Data", TabularViewer, TabularEditor, TypeTabularViewer),
   );
 
   let auth = $state({ authenticated: false, user: null as { sub: string; name: string } | null, token: null as string | null });

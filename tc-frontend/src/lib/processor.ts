@@ -8,8 +8,18 @@ export interface ViewerProps {
     content_in: Record<string, any>,
 }
 
+export interface TypeViewerProps {
+    type_name: string,
+}
+
 export class BaseProcessor {
-    constructor(public type: string, public name: string, public viewer: Component<ViewerProps> | null, public editor: Component<{}, EditorExports> | null) { }
+    constructor(
+        public type: string,
+        public name: string,
+        public viewer: Component<ViewerProps> | null,
+        public editor: Component<{}, EditorExports> | null,
+        public typeViewer: Component<TypeViewerProps> | null = null,
+    ) { }
 }
 
 class ProcessorRegistry {

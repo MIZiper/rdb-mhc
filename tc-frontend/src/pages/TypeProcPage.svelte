@@ -16,9 +16,12 @@
     import { getContext } from "svelte";
     import { fetch_tags_info, construct_tags_by_ids } from "./FetchMetaHubTags";
     import { searchParams } from "sv-router";
+    import { registry } from "../lib/processor";
 
     let router: any = getContext("router");
     const type_name = router.route.getParams("/types/:type_name").type_name;
+
+    let processor = $derived(registry.getProcessor(type_name));
 
     let items: ItemMeta[] = $state([]);
     let loading: boolean = $state(true);
@@ -77,6 +80,7 @@
     }
 
     $effect(() => {
+        if (processor?.typeViewer) return;
         const page = parseInt(searchParams.get("page") || "1", 10);
         currentPage = isNaN(page) || page < 1 ? 1 : page;
         loadData(currentPage);
@@ -85,7 +89,9 @@
 
 <Container class="my-2" fluid>
     <h4>Type: {type_name}</h4>
-    {#if loading}
+    {#if processor?.typeViewer}
+        <processor.typeViewer type_name={type_name} />
+    {:else if loading}
         <div class="text-center py-5"><Spinner /></div>
     {:else if error}
         <p class="text-danger">Error: {error}</p>
