@@ -16,106 +16,136 @@
     let { content_in }: ViewerProps = $props();
 
     let channels: Channel[] = $derived((content_in?.channels as Channel[]) || [])
-    let selectedChannelIdx: number = $state(0)
-    let sortField: "id_idx" | "time" | "value" | null = $state(null)
-    let sortAsc: boolean = $state(true)
 
-    let sortedData = $derived.by(() => {
-        const ch = channels[selectedChannelIdx]
-        if (!ch) return []
-        const field = sortField
-        if (!field) return ch.data
-        const rows = [...ch.data]
-        rows.sort((a, b) => {
-            const va = a[field] ?? ""
-            const vb = b[field] ?? ""
-            if (va < vb) return sortAsc ? -1 : 1
-            if (va > vb) return sortAsc ? 1 : -1
-            return 0
-        })
-        return rows
+    let allIdIdxs: string[] = $derived.by(() => {
+        const seen = new Set<string>()
+        for (const ch of channels) {
+            for (const row of ch.data) {
+                if (row.id_idx) seen.add(row.id_idx)
+            }
+        }
+        return [...seen].sort()
     })
 
-    function toggleSort(field: "id_idx" | "time" | "value") {
-        if (sortField === field) {
-            sortAsc = !sortAsc
+    let idxTimeMap = $derived.by(() => {
+        const m = new Map<string, number>()
+        for (const ch of channels) {
+            for (const row of ch.data) {
+                if (row.id_idx && !m.has(row.id_idx)) {
+                    m.set(row.id_idx, row.time)
+                }
+            }
+        }
+        return m
+    })
+
+    let channelValueMaps = $derived.by(() => {
+        return channels.map(ch => {
+            const m = new Map<string, number>()
+            for (const row of ch.data) {
+                if (row.id_idx) m.set(row.id_idx, row.value)
+            }
+            return m
+        })
+    })
+
+    interface SortState {
+        col: number  // -1=id_idx, -2=time, 0+=channel index
+        asc: boolean
+    }
+
+    let sort: SortState = $state({ col: -1, asc: true })
+
+    let visibleRows = $derived.by(() => {
+        const rows = allIdIdxs.map(idIdx => {
+            const vals = channelValueMaps.map((m, ci) => m.get(idIdx) ?? null)
+            return { id_idx: idIdx, time: idxTimeMap.get(idIdx) ?? 0, values: vals }
+        })
+
+        if (sort.col < -1) return rows
+
+        return [...rows].sort((a, b) => {
+            let va: number | string, vb: number | string
+            if (sort.col === -1) {
+                va = a.id_idx; vb = b.id_idx
+            } else if (sort.col === -2) {
+                va = a.time; vb = b.time
+            } else {
+                va = a.values[sort.col] ?? (sort.asc ? Infinity : -Infinity)
+                vb = b.values[sort.col] ?? (sort.asc ? Infinity : -Infinity)
+            }
+            if (va < vb) return sort.asc ? -1 : 1
+            if (va > vb) return sort.asc ? 1 : -1
+            return 0
+        })
+    })
+
+    function setSort(col: number) {
+        if (sort.col === col) {
+            sort = { col, asc: !sort.asc }
         } else {
-            sortField = field
-            sortAsc = true
+            sort = { col, asc: true }
         }
     }
 
-    function fmt(val: number): string {
-        return Number.isFinite(val) ? val.toFixed(4).replace(/\.?0+$/, "") : String(val)
+    function sortIcon(col: number): string {
+        if (sort.col !== col) return ""
+        return sort.asc ? " ▲" : " ▼"
     }
 
-    function sortIndicator(field: string): string {
-        if (sortField !== field) return ""
-        return sortAsc ? " ▲" : " ▼"
+    function fmt(n: number): string {
+        return Number.isFinite(n) ? n.toFixed(4).replace(/\.?0+$/, "") : String(n)
     }
 </script>
 
 {#if channels.length === 0}
     <p class="text-muted">无表格数据</p>
 {:else}
-    <div class="channel-tabs">
-        {#each channels as ch, idx}
-            <button class="tab" class:active={idx === selectedChannelIdx} onclick={() => { selectedChannelIdx = idx }}>
-                {ch.name || `通道${idx + 1}`}
-                {#if ch.id_name}
-                    <span class="id-name">({ch.id_name})</span>
-                {/if}
-            </button>
-        {/each}
-    </div>
-
-    {#if channels[selectedChannelIdx]}
+    <div class="table-wrap">
         <table>
             <thead>
                 <tr>
-                    <th>#</th>
-                    <th class="sortable" onclick={() => toggleSort("id_idx")}>id_idx{sortIndicator("id_idx")}</th>
-                    <th class="sortable" onclick={() => toggleSort("time")}>time{sortIndicator("time")}</th>
-                    <th class="sortable" onclick={() => toggleSort("value")}>value{sortIndicator("value")}</th>
+                    <th class="sortable" onclick={() => setSort(-1)}>
+                        id_idx{sortIcon(-1)}
+                    </th>
+                    <th class="sortable" onclick={() => setSort(-2)}>
+                        time{sortIcon(-2)}
+                    </th>
+                    {#each channels as ch, ci}
+                        <th class="sortable" onclick={() => setSort(ci)}>
+                            <span>{ch.name}</span>
+                            {#if ch.id_name}
+                                <span class="ch-id">({ch.id_name})</span>
+                            {/if}
+                            {sortIcon(ci)}
+                        </th>
+                    {/each}
                 </tr>
             </thead>
             <tbody>
-                {#each sortedData as row, rowIdx}
+                {#each visibleRows as row}
                     <tr>
-                        <td class="row-num">{rowIdx}</td>
-                        <td>{row.id_idx ?? ""}</td>
-                        <td>{fmt(row.time)}</td>
-                        <td class="val">{fmt(row.value)}</td>
+                        <td class="row-id">{row.id_idx}</td>
+                        <td class="mono">{fmt(row.time)}</td>
+                        {#each row.values as val, _ci}
+                            <td class="mono">
+                                {#if val !== null}
+                                    {fmt(val)}
+                                {:else}
+                                    <span class="null-cell">—</span>
+                                {/if}
+                            </td>
+                        {/each}
                     </tr>
                 {/each}
             </tbody>
         </table>
-    {/if}
+    </div>
 {/if}
 
 <style>
-    .channel-tabs {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4px;
-        margin-bottom: 8px;
-    }
-    .tab {
-        padding: 4px 10px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        background: #f0f0f0;
-        cursor: pointer;
-        font-size: 0.9em;
-    }
-    .tab.active {
-        background: #49a9a7;
-        color: white;
-        border-color: #49a9a7;
-    }
-    .id-name {
-        font-size: 0.8em;
-        opacity: 0.7;
+    .table-wrap {
+        overflow-x: auto;
     }
     table {
         border-collapse: collapse;
@@ -124,25 +154,32 @@
     th, td {
         padding: 4px 8px;
         border: 1px solid #e0e0e0;
+        white-space: nowrap;
         text-align: left;
     }
     th {
         background: #f7f7f8;
         font-size: 0.85em;
-    }
-    th.sortable {
         cursor: pointer;
         user-select: none;
     }
-    th.sortable:hover {
+    th:hover {
         background: #e8e8ea;
     }
-    .row-num {
-        color: #999;
+    .ch-id {
         font-size: 0.8em;
-        width: 30px;
+        opacity: 0.6;
     }
-    .val {
+    .row-id {
+        font-size: 0.85em;
+        color: #555;
+    }
+    .mono {
         font-family: monospace;
+        font-size: 0.9em;
+    }
+    .null-cell {
+        color: #ccc;
+        font-style: italic;
     }
 </style>

@@ -9,7 +9,7 @@ export interface ViewerProps {
 }
 
 export interface TypeViewerProps {
-    type_name: string,
+    items: { title: string; content: Record<string, any> }[],
 }
 
 export class BaseProcessor {

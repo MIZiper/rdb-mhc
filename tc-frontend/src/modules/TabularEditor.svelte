@@ -1,135 +1,182 @@
 <script lang="ts">
-    interface DataRow {
-        id_idx: string
-        time: number
-        value: number
-    }
-
-    interface Channel {
+    interface ChannelDef {
         name: string
         id_name: string
-        data: DataRow[]
     }
 
-    let channels: Channel[] = $state([
-        { name: "通道A", id_name: "channel_a", data: [{ id_idx: "r0", time: 0, value: 0 }] }
+    interface RowDef {
+        id_idx: string
+        time: number
+    }
+
+    let rows: RowDef[] = $state([
+        { id_idx: "r0", time: 0 },
+        { id_idx: "r1", time: 1 },
+    ])
+    let columns: ChannelDef[] = $state([
+        { name: "通道A", id_name: "channel_a" },
+        { name: "通道B", id_name: "channel_b" },
+    ])
+    let values: (number | null)[][] = $state([
+        [null, null],
+        [null, null],
     ])
 
-    let selectedChannelIdx: number = $state(0)
+    $effect(() => {
+        while (values.length < columns.length) {
+            values = [...values, Array(rows.length).fill(null)]
+        }
+        while (values.length > columns.length) {
+            values = values.slice(0, columns.length)
+        }
+        for (let i = 0; i < values.length; i++) {
+            while (values[i].length < rows.length) {
+                const newVals = [...values[i], null]
+                values = values.map((col, ci) => ci === i ? newVals : col)
+            }
+            while (values[i].length > rows.length) {
+                const newVals = values[i].slice(0, rows.length)
+                values = values.map((col, ci) => ci === i ? newVals : col)
+            }
+        }
+    })
 
     export function getContent() {
-        return {
-            channels: channels.map(ch => ({
-                name: ch.name,
-                id_name: ch.id_name || null,
-                data: ch.data.map(row => ({
-                    id_idx: row.id_idx || null,
-                    time: row.time,
-                    value: row.value,
-                })),
-            })),
-        }
+        const channels = columns.map((col, colIdx) => ({
+            name: col.name,
+            id_name: col.id_name || null,
+            data: rows.map((row, rowIdx) => {
+                return { id_idx: row.id_idx || null, time: row.time, value: values[colIdx]?.[rowIdx] ?? null }
+            }).filter(d => d.value !== null),
+        }))
+        return { channels }
     }
 
-    function addChannel() {
-        const idx = channels.length
-        channels = [...channels, { name: `通道${idx + 1}`, id_name: "", data: [{ id_idx: "r0", time: 0, value: 0 }] }]
-        selectedChannelIdx = channels.length - 1
+    function addColumn() {
+        columns = [...columns, { name: `通道${columns.length + 1}`, id_name: "" }]
     }
 
-    function removeChannel(index: number) {
-        channels = channels.filter((_, i) => i !== index)
-        if (selectedChannelIdx >= channels.length) selectedChannelIdx = Math.max(0, channels.length - 1)
+    function removeColumn(colIdx: number) {
+        columns = columns.filter((_, i) => i !== colIdx)
+        values = values.filter((_, i) => i !== colIdx)
     }
 
-    function addRow(chIdx: number) {
-        channels = channels.map((ch, i) => {
-            if (i !== chIdx) return ch
-            const rowIdx = ch.data.length
-            return { ...ch, data: [...ch.data, { id_idx: `r${rowIdx}`, time: 0, value: 0 }] }
+    function addRow() {
+        const idx = rows.length
+        rows = [...rows, { id_idx: `r${idx}`, time: 0 }]
+    }
+
+    function removeRow(rowIdx: number) {
+        rows = rows.filter((_, i) => i !== rowIdx)
+    }
+
+    function updateRowField(rowIdx: number, field: "id_idx" | "time", val: string) {
+        rows = rows.map((r, i) => {
+            if (i !== rowIdx) return r
+            if (field === "id_idx") return { ...r, id_idx: val }
+            return { ...r, time: parseFloat(val) || 0 }
         })
     }
 
-    function removeRow(chIdx: number, rowIdx: number) {
-        channels = channels.map((ch, i) => {
-            if (i !== chIdx) return ch
-            return { ...ch, data: ch.data.filter((_, j) => j !== rowIdx) }
+    function updateColumnField(colIdx: number, field: "name" | "id_name", val: string) {
+        columns = columns.map((c, i) => {
+            if (i !== colIdx) return c
+            return { ...c, [field]: val }
         })
     }
 
-    function updateChannelField(chIdx: number, field: "name" | "id_name", value: string) {
-        channels = channels.map((ch, i) => {
-            if (i !== chIdx) return ch
-            return { ...ch, [field]: value }
+    function updateValue(colIdx: number, rowIdx: number, valStr: string) {
+        const num = valStr.trim() === "" ? null : parseFloat(valStr)
+        values = values.map((col, ci) => {
+            if (ci !== colIdx) return col
+            const newCol = [...col]
+            newCol[rowIdx] = isNaN(num as number) && num !== null ? col[rowIdx] : num
+            return newCol
         })
     }
 
-    function updateRowField(chIdx: number, rowIdx: number, field: "id_idx" | "time" | "value", value: string) {
-        channels = channels.map((ch, i) => {
-            if (i !== chIdx) return ch
-            const newData = ch.data.map((row, j) => {
-                if (j !== rowIdx) return row
-                const val = field === "id_idx" ? value : parseFloat(value) || 0
-                return { ...row, [field]: val }
-            })
-            return { ...ch, data: newData }
-        })
+    function fmt(v: number | null): string {
+        return v === null ? "" : String(v)
     }
 </script>
 
 <div id="main">
-    <div class="channel-tabs">
-        {#each channels as ch, idx}
-            <div
-                class="tab"
-                class:active={idx === selectedChannelIdx}
-                role="button"
-                tabindex="0"
-                onkeydown={(e: KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") selectedChannelIdx = idx }}
-                onclick={() => { selectedChannelIdx = idx }}
-            >
-                {ch.name || `通道${idx + 1}`}
-                {#if channels.length > 1}
-                    <button class="tab-close-btn" onclick={(e: MouseEvent) => { e.stopPropagation(); removeChannel(idx) }}>×</button>
-                {/if}
-            </div>
-        {/each}
-        <button class="tab add-tab" onclick={addChannel}>+ 通道</button>
+    <div class="meta-row">
+        <button class="btn-sm" onclick={addColumn}>+ 列 (通道)</button>
+        <button class="btn-sm" onclick={addRow}>+ 行</button>
     </div>
 
-    {#if channels[selectedChannelIdx]}
-        {@const ch = channels[selectedChannelIdx]}
-        <div class="channel-form">
-            <label>名称 <input type="text" value={ch.name} oninput={(e: Event) => updateChannelField(selectedChannelIdx, "name", (e.target as HTMLInputElement).value)} /></label>
-            <label>id_name <input type="text" value={ch.id_name} oninput={(e: Event) => updateChannelField(selectedChannelIdx, "id_name", (e.target as HTMLInputElement).value)} placeholder="跨item关联用，留空则用name匹配" /></label>
-        </div>
-
+    <div class="table-wrap">
         <table>
             <thead>
                 <tr>
-                    <th>id_idx</th>
-                    <th>time</th>
-                    <th>value</th>
-                    <th></th>
+                    <th class="row-header">id_idx</th>
+                    <th class="row-header">time</th>
+                    {#each columns as col, colIdx}
+                        <th class="col-header">
+                            <div class="col-name">
+                                <input
+                                    type="text"
+                                    value={col.name}
+                                    oninput={(e: Event) => updateColumnField(colIdx, "name", (e.target as HTMLInputElement).value)}
+                                    class="th-input name-input"
+                                />
+                                <input
+                                    type="text"
+                                    value={col.id_name}
+                                    oninput={(e: Event) => updateColumnField(colIdx, "id_name", (e.target as HTMLInputElement).value)}
+                                    placeholder="id_name"
+                                    class="th-input id-input"
+                                />
+                            </div>
+                            {#if columns.length > 1}
+                                <button class="btn-del-th" onclick={() => removeColumn(colIdx)}>×</button>
+                            {/if}
+                        </th>
+                    {/each}
+                    <th class="spacer"></th>
                 </tr>
             </thead>
             <tbody>
-                {#each ch.data as row, rowIdx}
+                {#each rows as row, rowIdx}
                     <tr>
-                        <td><input type="text" value={row.id_idx} oninput={(e: Event) => updateRowField(selectedChannelIdx, rowIdx, "id_idx", (e.target as HTMLInputElement).value)} /></td>
-                        <td><input type="number" value={row.time} oninput={(e: Event) => updateRowField(selectedChannelIdx, rowIdx, "time", (e.target as HTMLInputElement).value)} /></td>
-                        <td><input type="number" value={row.value} oninput={(e: Event) => updateRowField(selectedChannelIdx, rowIdx, "value", (e.target as HTMLInputElement).value)} /></td>
-                        <td>
-                            {#if ch.data.length > 1}
-                                <button class="btn-del" onclick={() => removeRow(selectedChannelIdx, rowIdx)}>×</button>
+                        <td class="row-header-cell">
+                            <input
+                                type="text"
+                                value={row.id_idx}
+                                oninput={(e: Event) => updateRowField(rowIdx, "id_idx", (e.target as HTMLInputElement).value)}
+                                class="cell-input id-cell"
+                            />
+                        </td>
+                        <td class="row-header-cell">
+                            <input
+                                type="number"
+                                value={row.time}
+                                oninput={(e: Event) => updateRowField(rowIdx, "time", (e.target as HTMLInputElement).value)}
+                                class="cell-input time-cell"
+                            />
+                        </td>
+                        {#each columns as _, colIdx}
+                            <td>
+                                <input
+                                    type="number"
+                                    value={fmt(values[colIdx]?.[rowIdx] ?? null)}
+                                    oninput={(e: Event) => updateValue(colIdx, rowIdx, (e.target as HTMLInputElement).value)}
+                                    class="cell-input val-cell"
+                                    placeholder="null"
+                                />
+                            </td>
+                        {/each}
+                        <td class="row-del">
+                            {#if rows.length > 1}
+                                <button class="btn-del" onclick={() => removeRow(rowIdx)}>×</button>
                             {/if}
                         </td>
                     </tr>
                 {/each}
             </tbody>
         </table>
-        <button class="btn-add-row" onclick={() => addRow(selectedChannelIdx)}>+ 行</button>
-    {/if}
+    </div>
 </div>
 
 <style>
@@ -138,76 +185,94 @@
         flex-direction: column;
         gap: 8px;
     }
-    .channel-tabs {
+    .meta-row {
         display: flex;
-        flex-wrap: wrap;
-        gap: 4px;
+        gap: 8px;
     }
-    .tab {
-        padding: 4px 10px;
-        border: 1px solid #ccc;
+    .btn-sm {
+        padding: 2px 10px;
+        border: 1px solid #999;
         border-radius: 4px;
-        background: #f0f0f0;
+        background: #fff;
         cursor: pointer;
-        font-size: 0.9em;
-    }
-    .tab.active {
-        background: #49a9a7;
-        color: white;
-        border-color: #49a9a7;
-    }
-    .tab.add-tab {
-        background: transparent;
-        border-style: dashed;
-    }
-    .tab-close-btn {
-        margin-left: 6px;
-        opacity: 0.6;
-        border: none;
-        background: none;
-        cursor: pointer;
-        padding: 0;
-        font-weight: bold;
-        font-size: 1em;
-        color: inherit;
-    }
-    .tab-close-btn:hover {
-        opacity: 1;
-    }
-    .channel-form {
-        display: flex;
-        gap: 12px;
-    }
-    .channel-form label {
         font-size: 0.85em;
-        color: #555;
     }
-    .channel-form input {
-        display: block;
-        margin-top: 2px;
-        padding: 2px 6px;
-        border: 1px solid #ccc;
-        border-radius: 3px;
+    .table-wrap {
+        overflow-x: auto;
     }
     table {
         border-collapse: collapse;
-        width: 100%;
     }
     th, td {
-        padding: 4px 8px;
+        padding: 2px 4px;
         border: 1px solid #e0e0e0;
-        text-align: left;
+        white-space: nowrap;
     }
     th {
         background: #f7f7f8;
-        font-size: 0.85em;
+        vertical-align: top;
     }
-    td input {
-        width: 80px;
-        padding: 2px 4px;
+    .row-header {
+        min-width: 60px;
+    }
+    .col-header {
+        min-width: 80px;
+        position: relative;
+    }
+    .col-name {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    .th-input {
         border: 1px solid #ddd;
         border-radius: 3px;
-        font-size: 0.9em;
+        padding: 1px 4px;
+        font-size: 0.8em;
+    }
+    .name-input {
+        width: 70px;
+    }
+    .id-input {
+        width: 70px;
+        font-size: 0.75em;
+        opacity: 0.7;
+    }
+    .btn-del-th {
+        border: none;
+        background: none;
+        color: #c00;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 0.85em;
+        padding: 0 2px;
+        position: absolute;
+        top: 0;
+        right: 0;
+    }
+    .cell-input {
+        border: 1px solid #eee;
+        border-radius: 2px;
+        padding: 2px 4px;
+        font-size: 0.85em;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    .id-cell {
+        width: 70px;
+    }
+    .time-cell {
+        width: 60px;
+    }
+    .val-cell {
+        width: 70px;
+    }
+    .row-header-cell {
+        background: #fafafa;
+    }
+    .row-del {
+        padding: 0;
+        width: 20px;
     }
     .btn-del {
         border: none;
@@ -215,15 +280,12 @@
         color: #c00;
         cursor: pointer;
         font-weight: bold;
-        font-size: 1.1em;
+        font-size: 1em;
+        padding: 2px 4px;
     }
-    .btn-add-row {
-        align-self: flex-start;
-        padding: 4px 12px;
-        border: 1px dashed #999;
-        border-radius: 4px;
-        background: transparent;
-        cursor: pointer;
-        font-size: 0.85em;
+    .spacer {
+        border: none;
+        min-width: 0;
+        width: 20px;
     }
 </style>
