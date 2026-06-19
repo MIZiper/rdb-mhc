@@ -1,3 +1,5 @@
+export *  from "./lib/auth";
+
 export type { ItemMeta } from "./schema";
 
 export { getConfig } from "./utils/GetRuntimeEnv";

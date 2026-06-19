@@ -26,7 +26,7 @@ def _row_to_meta(r, tag_ids: list[int] = None) -> NodeMetaRead:
         data_type=r["content_type"],
         creator_name=r.get("creator_name"),
         creator_sub=r.get("creator_sub"),
-        status=r.get("status", "draft"),
+        status=r.get("status") or "draft",
     )
 
 
@@ -164,9 +164,12 @@ async def search_nodes_by_tags(
 @router.get("/{node_id}/meta", response_model=NodeMetaRead)
 async def get_node_meta(node_id: UUID, conn: Connection = Depends(get_db)):
     row = await conn.fetchrow(
-        """SELECT id, title, description, updated_at, content_type,
-                  creator_name, creator_sub, status
-           FROM nodes WHERE id=$1""",
+        """SELECT id, title, description, updated_at,
+            to_jsonb(n) ->> 'content_type' AS content_type,
+            to_jsonb(n) ->> 'creator_name' AS creator_name,
+            to_jsonb(n) ->> 'creator_sub' AS creator_sub,
+            to_jsonb(n) ->> 'status' AS status
+           FROM nodes n WHERE id=$1""",
         node_id,
     )
     if row is None:
