@@ -121,11 +121,16 @@ async def get_current_user(
             detail="Token missing sub claim",
         )
     name = payload.get("name") or payload.get("preferred_username") or sub
-    roles = (
-        payload.get("resource_access", {})
-        .get(KC_CLIENT_ID, {})
-        .get("roles", [])
-    )
+
+    resource_access = payload.get("resource_access", {})
+    client_access = resource_access.get(KC_CLIENT_ID, {})
+    client_roles = client_access.get("roles", [])
+
+    realm_access = payload.get("realm_access", {})
+    realm_roles = realm_access.get("roles", [])
+
+    roles = list({*client_roles, *realm_roles})
+
     return {"sub": sub, "name": name, "roles": roles}
 
 

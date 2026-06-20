@@ -15,7 +15,7 @@ def has_role(user: dict, role: str) -> bool:
 
 def require_role(role: str):
     async def checker(user: dict = Depends(get_current_user)) -> dict:
-        if not has_role(user, role):
+        if role not in user.get("roles", []):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Role '{role}' required",

@@ -14,11 +14,9 @@ from tc.services.metahub_client import expand_tag_ids
 from tc.auth.keycloak import get_current_user, get_optional_user
 from tc.auth.permissions import (
     require_role,
-    require_any_role,
     check_edit_node,
     can_see_node,
     ROLE_CREATE,
-    ROLE_EDIT_ANY,
     ROLE_READ_ALL,
     ROLE_REVIEW,
 )
@@ -251,7 +249,7 @@ async def update_node_meta(
     node_id: UUID,
     node: NodeUpdate,
     conn: Connection = Depends(get_db),
-    user: dict = Depends(require_any_role(ROLE_EDIT_ANY)),
+    user: dict = Depends(get_current_user),
 ):
     existing = await conn.fetchrow(
         """SELECT id, creator_sub, creator_name, status, content_type, visibility

@@ -3,7 +3,8 @@ import secrets
 from fastapi import APIRouter, Depends, HTTPException, Body, status
 from asyncpg.connection import Connection
 from tc.db.connection import get_db
-from tc.auth.permissions import require_any_role, check_edit_node, ROLE_EDIT_ANY
+from tc.auth.keycloak import get_current_user
+from tc.auth.permissions import check_edit_node
 
 router = APIRouter(prefix="/nodes")
 
@@ -18,7 +19,7 @@ async def push_to_node(
     data: dict = Body(...),
     mode: str = Body("w"),
     conn: Connection = Depends(get_db),
-    user: dict = Depends(require_any_role(ROLE_EDIT_ANY)),
+    user: dict = Depends(get_current_user),
 ):
     node = await conn.fetchrow(
         """SELECT id, creator_sub, frozen, validate_key, content
@@ -67,7 +68,7 @@ async def push_to_node(
 async def reset_validate_key(
     node_id: UUID,
     conn: Connection = Depends(get_db),
-    user: dict = Depends(require_any_role(ROLE_EDIT_ANY)),
+    user: dict = Depends(get_current_user),
 ):
     existing = await conn.fetchrow(
         "SELECT id, creator_sub FROM nodes WHERE id=$1", node_id

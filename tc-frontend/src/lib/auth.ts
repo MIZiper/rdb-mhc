@@ -50,11 +50,11 @@ export async function checkAuth(config: KeycloakConfig): Promise<AuthState> {
         _initialized = true;
 
         if (authenticated && kc.tokenParsed) {
-            const resourceAccess = kc.tokenParsed.resource_access as Record<
-                string,
-                { roles?: string[] }
-            > | undefined;
-            _roles = resourceAccess?.[config.clientId]?.roles ?? [];
+            const tp = kc.tokenParsed as any;
+            const resourceAccess = tp.resource_access as Record<string, { roles?: string[] }> | undefined;
+            const clientRoles = resourceAccess?.[config.clientId]?.roles ?? [];
+            const realmRoles = (tp.realm_access as { roles?: string[] } | undefined)?.roles ?? [];
+            _roles = [...new Set([...clientRoles, ...realmRoles])];
         }
 
         return getAuthState();

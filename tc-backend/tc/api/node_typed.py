@@ -10,14 +10,12 @@ from asyncpg.connection import Connection
 from tc.db.connection import get_db
 from tc.models import NodeMetaRead, NodeMetaList
 from tc.models.typed_node import NodeData, NodeDataRead, NodeDataPayload, NodeTypedCreate
-from tc.auth.keycloak import get_optional_user
+from tc.auth.keycloak import get_optional_user, get_current_user
 from tc.auth.permissions import (
     require_role,
-    require_any_role,
     check_edit_node,
     can_see_node,
     ROLE_CREATE,
-    ROLE_EDIT_ANY,
 )
 
 router = APIRouter(prefix="/nodes")
@@ -192,7 +190,7 @@ async def patch_node_data(
     node_id: UUID,
     updates: dict = Body(..., description="Partial data updates"),
     conn: Connection = Depends(get_db),
-    user: dict = Depends(require_any_role(ROLE_EDIT_ANY)),
+    user: dict = Depends(get_current_user),
 ):
     row = await conn.fetchrow(
         """SELECT id, title, description, content, content_type, updated_at,
@@ -261,7 +259,7 @@ async def ingest_node_data(
     node_id: UUID,
     payload: NodeDataPayload,
     conn: Connection = Depends(get_db),
-    user: dict = Depends(require_any_role(ROLE_EDIT_ANY)),
+    user: dict = Depends(get_current_user),
 ):
     existing = await conn.fetchrow(
         """SELECT id, creator_sub, creator_name, status
