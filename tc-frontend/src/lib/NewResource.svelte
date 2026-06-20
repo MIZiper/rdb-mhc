@@ -32,6 +32,8 @@
         visibility: "public",
     });
     let tagSelectorOpen: boolean = $state(false);
+    let visibilityPreset: string = $state("public");
+    let customVisibility: string = $state("");
 
     let { onSubmit } = $props();
 
@@ -44,6 +46,12 @@
 
     let saving = $state(false);
     let errorMsg = $state("");
+
+    $effect(() => {
+        if (visibilityPreset !== "__custom__") {
+            item.visibility = visibilityPreset;
+        }
+    });
 
     async function addResource() {
         saving = true;
@@ -84,6 +92,25 @@
         <Input type="text" bind:value={item.title} />
         <Label>Description</Label>
         <Input type="textarea" bind:value={item.description} />
+
+        <Label>Visibility</Label>
+        <select class="form-select" bind:value={visibilityPreset}>
+            <option value="public">Public</option>
+            <option value="internal">Internal</option>
+            <option value="confidential">Confidential</option>
+            <option value="__custom__">Custom...</option>
+        </select>
+        {#if visibilityPreset === "__custom__"}
+            <Input
+                type="text"
+                class="mt-2"
+                placeholder="e.g. proj_a"
+                bind:value={customVisibility}
+                oninput={() => {
+                    item.visibility = customVisibility;
+                }}
+            />
+        {/if}
 
         <Button
             class="mt-4"

@@ -61,7 +61,7 @@ def _visibility_filter(
     sub = user["sub"]
     clause = f"{prefix} ("
     clause += f"COALESCE({table_alias}.visibility, 'public') = 'public' "
-    clause += f"OR COALESCE({table_alias}.visibility, 'public') = ANY($1) "
+    clause += f"OR ('nodes:visibility:' || COALESCE({table_alias}.visibility, 'public')) = ANY($1) "
     clause += f"OR {table_alias}.creator_sub = $2)"
     return clause, [list(roles), sub]
 

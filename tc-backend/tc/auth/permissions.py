@@ -48,7 +48,7 @@ def can_see_node(
         return True
     if visibility == "public":
         return True
-    if visibility in user_roles:
+    if f"nodes:visibility:{visibility}" in user_roles:
         return True
     if creator_sub == user_sub:
         return True
