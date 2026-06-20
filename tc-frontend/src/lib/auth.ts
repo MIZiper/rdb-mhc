@@ -4,6 +4,10 @@ import { getContext, setContext } from "svelte";
 let _keycloak: Keycloak | null = null;
 let _initialized = false;
 let _roles: string[] = [];
+let _authResolve: ((state: AuthState) => void) | null = null;
+export const authReady: Promise<AuthState> = new Promise((resolve) => {
+    _authResolve = resolve;
+});
 
 export interface KeycloakConfig {
     url: string;
@@ -57,10 +61,14 @@ export async function checkAuth(config: KeycloakConfig): Promise<AuthState> {
             _roles = [...new Set([...clientRoles, ...realmRoles])];
         }
 
-        return getAuthState();
+        const state = getAuthState();
+        _authResolve?.(state);
+        return state;
     } catch (e) {
         _initialized = true;
-        return { authenticated: false, user: null, token: null, roles: [] };
+        const state: AuthState = { authenticated: false, user: null, token: null, roles: [] };
+        _authResolve?.(state);
+        return state;
     }
 }
 
@@ -75,11 +83,13 @@ export async function logout(config: KeycloakConfig): Promise<void> {
 }
 
 export async function getToken(): Promise<string | null> {
-    const kc = initKeycloak();
-    if (!kc.authenticated) return null;
+    if (!_initialized) {
+        await authReady;
+    }
+    if (!_keycloak || !_keycloak.authenticated) return null;
     try {
-        await kc.updateToken(30);
-        return kc.token || null;
+        await _keycloak.updateToken(30);
+        return _keycloak.token || null;
     } catch {
         return null;
     }
@@ -103,6 +113,10 @@ export function getAuthState(): AuthState {
         token: kc.token || null,
         roles: _roles,
     };
+}
+
+export function isAuthInitialized(): boolean {
+    return _initialized;
 }
 
 export function isAuthenticated(): boolean {

@@ -1,7 +1,7 @@
 export {
     checkAuth, login, logout, getToken, getAuthState,
     isAuthenticated, authFetch, setAuthContext, getAuthContext,
-    hasRole, hasAnyRole, getRoles,
+    hasRole, hasAnyRole, getRoles, authReady,
 } from "./lib/auth";
 export type { KeycloakConfig, AuthState } from "./lib/auth";
 

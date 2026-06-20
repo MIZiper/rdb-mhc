@@ -5,6 +5,7 @@
 
     import { getContext, onMount } from "svelte";
     import { construct_tags_by_ids, fetch_tags_info } from "./FetchMetaHubTags";
+    import { authFetch, getAuthContext } from "../lib/auth";
 
     let router: any = getContext("router");
     let items: ItemMeta[] = $state([]);
@@ -16,7 +17,7 @@
     async function loadData(tag_ids: number[]) {
         loading = true;
 
-        const res = await fetch(`/api/nodes/by-tags`, {
+        const res = await authFetch(`/api/nodes/by-tags`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(tag_ids),
@@ -51,6 +52,7 @@
         const tag_id_str = router.route.getParams(
             "/tags/:tag_id/:tag_str",
         ).tag_id;
+        const _auth = getAuthContext();
         loadData([Number(tag_id_str)]).then(() => {});
     });
 </script>

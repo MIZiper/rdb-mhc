@@ -14,6 +14,7 @@
     import { fetch_tags_info, construct_tags_by_ids } from "./FetchMetaHubTags";
     import { searchParams } from "sv-router";
     import { registry } from "../lib/processor";
+    import { authFetch, getAuthContext } from "../lib/auth";
 
     let router: any = getContext("router");
     const type_name = router.route.getParams("/types/:type_name").type_name;
@@ -54,7 +55,7 @@
                 page: page.toString(),
                 page_size: pageSize.toString(),
             }).toString();
-            const res = await fetch(`/api/nodes/types/${encodeURIComponent(type_name)}?${qs}`);
+            const res = await authFetch(`/api/nodes/types/${encodeURIComponent(type_name)}?${qs}`);
             if (!res.ok) throw new Error("Failed to fetch");
             const data = await res.json();
 
@@ -95,7 +96,7 @@
         try {
             const results: { title: string; content: any }[] = [];
             for (const id of ids) {
-                const res = await fetch(`/api/nodes/${id}/data`);
+                const res = await authFetch(`/api/nodes/${id}/data`);
                 if (!res.ok) continue;
                 const d = await res.json();
                 results.push({ title: d.title, content: d.content });
@@ -108,6 +109,7 @@
 
     $effect(() => {
         const page = parseInt(String(searchParams.get("page") || "1"), 10);
+        const _auth = getAuthContext();
         currentPage = isNaN(page) || page < 1 ? 1 : page;
         loadData(currentPage);
     });

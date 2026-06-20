@@ -49,9 +49,14 @@ def _row_to_meta(r, tag_ids: list[int] = None) -> NodeMetaRead:
     )
 
 
-def _visibility_filter(
+def _visibility_clause(
     user: Optional[dict], table_alias: str = "n", use_and: bool = False
 ) -> tuple[str, list]:
+    """
+    Returns (clause, args) where clause uses $1 and $2 for the
+    roles array and creator sub. Caller must prepend these args to
+    their parameter list and shift their own $N accordingly.
+    """
     prefix = "AND" if use_and else "WHERE"
     if user is None:
         return f"{prefix} COALESCE({table_alias}.visibility, 'public') = 'public'", []
@@ -61,7 +66,7 @@ def _visibility_filter(
     sub = user["sub"]
     clause = f"{prefix} ("
     clause += f"COALESCE({table_alias}.visibility, 'public') = 'public' "
-    clause += f"OR ('nodes:visibility:' || COALESCE({table_alias}.visibility, 'public')) = ANY($1) "
+    clause += f"OR ('nodes:visibility:' || COALESCE({table_alias}.visibility, 'public')) = ANY($1::text[]) "
     clause += f"OR {table_alias}.creator_sub = $2)"
     return clause, [list(roles), sub]
 
@@ -86,9 +91,15 @@ async def list_nodes(
     user=Depends(get_optional_user),
 ):
     offset = (page - 1) * page_size
+    v_clause, v_args = _visibility_clause(user, "n", use_and=True if q and q.strip() else False)
 
-    if q and q.strip():
-        v_clause, v_args = _visibility_filter(user, "n", use_and=True)
+    has_search = q and q.strip()
+
+    if has_search:
+        v_offset = len(v_args)
+        q_idx = v_offset + 1
+        limit_idx = v_offset + 2
+        offset_idx = v_offset + 3
         sql = f"""
             SELECT
                 id,
@@ -102,21 +113,24 @@ async def list_nodes(
                 COALESCE(to_jsonb(n) ->> 'visibility', 'public') AS visibility,
                 ts_headline('english', title, query, 'StartSel=<strong>, StopSel=</strong>') as title_highlight,
                 ts_rank(search_vector, query) as relevance
-            FROM nodes n, to_tsquery('english', $1) as query
+            FROM nodes n, to_tsquery('english', ${q_idx}) as query
             WHERE search_vector @@ query {v_clause}
             ORDER BY relevance DESC
-            LIMIT $2 OFFSET $3
+            LIMIT ${limit_idx} OFFSET ${offset_idx}
         """
-        params = [q, page_size, offset] + v_args
+        params = v_args + [q, page_size, offset]
 
         count_sql = f"""
-            SELECT COUNT(*) FROM nodes n, to_tsquery('english', $1) as query
+            SELECT COUNT(*) FROM nodes n, to_tsquery('english', ${q_idx}) as query
             WHERE search_vector @@ query {v_clause}
         """
-        count_result = await conn.fetchval(count_sql, *([q] + v_args))
+        count_args = v_args + [q]
+        count_result = await conn.fetchval(count_sql, *count_args)
 
     else:
-        v_clause, v_args = _visibility_filter(user, "n")
+        v_offset = len(v_args)
+        limit_idx = v_offset + 1
+        offset_idx = v_offset + 2
         sql = f"""
             SELECT
                 id,
@@ -133,9 +147,9 @@ async def list_nodes(
             FROM nodes n
             {v_clause}
             ORDER BY updated_at DESC
-            LIMIT $1 OFFSET $2
+            LIMIT ${limit_idx} OFFSET ${offset_idx}
         """
-        params = [page_size, offset] + v_args
+        params = v_args + [page_size, offset]
 
         count_sql = f"SELECT COUNT(*) FROM nodes n {v_clause}"
         count_result = await conn.fetchval(count_sql, *v_args)
@@ -143,12 +157,12 @@ async def list_nodes(
     nodes_rows = await conn.fetch(sql, *params)
     node_ids = [row["id"] for row in nodes_rows]
 
-    tags_query = """
-        SELECT node_id, tag_id
-        FROM node_tags
-        WHERE node_id = ANY($1)
-    """
-    tags_rows = await conn.fetch(tags_query, node_ids)
+    if node_ids:
+        tags_rows = await conn.fetch(
+            "SELECT node_id, tag_id FROM node_tags WHERE node_id = ANY($1)", node_ids
+        )
+    else:
+        tags_rows = []
 
     result_map = {r["id"]: _row_to_meta(r) for r in nodes_rows}
 
@@ -179,14 +193,15 @@ async def search_nodes_by_tags(
     if mode == "ancestors" or mode == "expanded":
         search_tag_ids = await expand_tag_ids(tag_ids)
 
-    limit_clause = "LIMIT $2" if limit else ""
-    args: list = [search_tag_ids]
+    v_clause, v_args = _visibility_clause(user, "n", use_and=True)
+
+    limit_clause = ""
+    args: list = v_args + [search_tag_ids]
     if limit:
+        limit_clause = f"LIMIT ${len(args) + 1}"
         args.append(limit)
 
-    v_clause, v_args = _visibility_filter(user, "n", use_and=True)
-    if v_clause:
-        args.extend(v_args)
+    tag_param = len(v_args) + 1
 
     query = f"""
         SELECT
@@ -207,7 +222,7 @@ async def search_nodes_by_tags(
             ) AS tag_ids
         FROM nodes n
         JOIN node_tags nt ON n.id = nt.node_id
-        WHERE nt.tag_id = ANY($1) {v_clause}
+        WHERE nt.tag_id = ANY(${tag_param}) {v_clause}
         GROUP BY n.id
         ORDER BY match_count DESC, n.id ASC
         {limit_clause}

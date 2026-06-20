@@ -18,6 +18,7 @@
     import { getContext, onMount } from "svelte";
     import { fetch_tags_info, construct_tags_by_ids } from "./FetchMetaHubTags";
     import { searchParams } from "sv-router";
+    import { authFetch, getAuthContext } from "../lib/auth";
 
     let router: any = getContext("router");
 
@@ -57,7 +58,7 @@
             };
 
             const qs = new URLSearchParams(apiParams).toString();
-            const res = await fetch(`/api/nodes/?${qs}`);
+            const res = await authFetch(`/api/nodes/?${qs}`);
             if (!res.ok) throw new Error("Failed to fetch");
             const data = await res.json();
 
@@ -119,6 +120,7 @@
     $effect(() => {
         const q = searchParams.get("q") || "";
         const page = parseInt(searchParams.get("page") || "1", 10);
+        const _auth = getAuthContext();
 
         loadData(String(q), Number(page)).then(() => {
             qSearch = q;

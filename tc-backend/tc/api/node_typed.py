@@ -21,19 +21,19 @@ from tc.auth.permissions import (
 router = APIRouter(prefix="/nodes")
 
 
-def _visibility_filter(
+def _visibility_clause(
     user: Optional[dict], table_alias: str = "n", use_and: bool = False
 ) -> tuple[str, list]:
     prefix = "AND" if use_and else "WHERE"
     if user is None:
         return f"{prefix} COALESCE({table_alias}.visibility, 'public') = 'public'", []
+    from tc.auth.permissions import ROLE_READ_ALL as _READ_ALL
     roles = user.get("roles", [])
-    from tc.auth.permissions import ROLE_READ_ALL
-    if ROLE_READ_ALL in roles:
+    if _READ_ALL in roles:
         return "", []
     clause = f"{prefix} ("
     clause += f"COALESCE({table_alias}.visibility, 'public') = 'public' "
-    clause += f"OR ('nodes:visibility:' || COALESCE({table_alias}.visibility, 'public')) = ANY($1) "
+    clause += f"OR ('nodes:visibility:' || COALESCE({table_alias}.visibility, 'public')) = ANY($1::text[]) "
     clause += f"OR {table_alias}.creator_sub = $2)"
     return clause, [list(roles), user["sub"]]
 
@@ -48,21 +48,21 @@ async def list_nodes_by_type(
 ):
     offset = (page - 1) * page_size
 
-    v_clause, v_args = _visibility_filter(user, "n", use_and=True)
+    v_clause, v_args = _visibility_clause(user, "n", use_and=True)
 
     sql = f"""
         SELECT id, title, description, updated_at, content, content_type,
                creator_name, creator_sub, status,
                COALESCE(visibility, 'public') AS visibility
         FROM nodes n
-        WHERE content_type = $1 {v_clause}
+        WHERE content_type = $3 {v_clause}
         ORDER BY updated_at DESC
-        LIMIT $2 OFFSET $3
+        LIMIT $4 OFFSET $5
     """
-    params = [data_type, page_size, offset] + v_args
+    params = v_args + [data_type, page_size, offset]
 
-    count_sql = f"SELECT COUNT(*) FROM nodes n WHERE content_type = $1 {v_clause}"
-    count_result = await conn.fetchval(count_sql, *([data_type] + v_args))
+    count_sql = f"SELECT COUNT(*) FROM nodes n WHERE content_type = $3 {v_clause}"
+    count_result = await conn.fetchval(count_sql, *(v_args + [data_type]))
 
     nodes_rows = await conn.fetch(sql, *params)
     node_ids = [row["id"] for row in nodes_rows]

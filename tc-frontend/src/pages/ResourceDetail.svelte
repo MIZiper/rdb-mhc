@@ -47,7 +47,7 @@
     }
 
     onMount(async () => {
-        const res = await fetch(`/api/nodes/${item_id}/data`);
+        const res = await authFetch(`/api/nodes/${item_id}/data`);
         const data = await res.json();
 
         const tags_cache = await fetch_tags_info(metahub_host, data.tag_ids);
