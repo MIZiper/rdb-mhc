@@ -63,6 +63,7 @@ class NodeDataRead(BaseModel):
     creator_name: Optional[str] = None
     creator_sub: Optional[str] = None
     status: str = "draft"
+    visibility: str = "public"
 
 
 
@@ -72,3 +73,4 @@ class NodeTypedCreate(BaseModel):
     content: dict | list[dict]
     data_type: str
     tag_ids: list[int]
+    visibility: str = "public"

@@ -141,7 +141,7 @@ async def get_optional_user(
 
 
 def require_reviewer(user: dict = Depends(get_current_user)) -> dict:
-    if "reviewer" not in user.get("roles", []):
+    if "nodes:review" not in user.get("roles", []):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Reviewer role required",

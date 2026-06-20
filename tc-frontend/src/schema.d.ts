@@ -10,6 +10,7 @@ export interface ItemMeta {
     creator_name: string | null
     creator_sub: string | null
     status: string
+    visibility: string
 }
 
 export interface ItemDetail extends ItemMeta{

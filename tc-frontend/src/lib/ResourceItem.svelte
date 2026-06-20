@@ -10,9 +10,15 @@
     } from "@sveltestrap/sveltestrap";
     import type { ItemMeta } from "../schema";
     import { getContext } from "svelte";
+    import { hasRole, getAuthContext } from "./auth.js";
 
     let { item }: { item: ItemMeta } = $props();
     let metahub_host = (getContext("mh_host") as string) || "";
+
+    let canEdit = $derived(
+        hasRole("nodes:edit_any") ||
+        (item.creator_sub === getAuthContext()?.user?.sub)
+    );
 
     function hashString(s: string) {
         let h = 0;
@@ -49,6 +55,14 @@
         }
     }
 
+    function visibilityColor(visibility: string): string {
+        switch (visibility) {
+            case "internal": return "info";
+            case "confidential": return "danger";
+            default: return "light";
+        }
+    }
+
     const barTextColor = "white";
 </script>
 
@@ -61,8 +75,14 @@
             {#if item.creator_name}
                 <span class="creator">{item.creator_name}</span>
             {/if}
+            {#if item.visibility && item.visibility !== "public"}
+                <Badge color={visibilityColor(item.visibility)} class="ms-1">{item.visibility}</Badge>
+            {/if}
             {#if item.status}
                 <Badge color={statusColor(item.status)} class="ms-1">{statusLabel(item.status)}</Badge>
+            {/if}
+            {#if canEdit}
+                <NavLink href="/items/{item.id}?edit=1" class="ms-1">Edit</NavLink>
             {/if}
             {item.update_time.toLocaleDateString()}
         </p>

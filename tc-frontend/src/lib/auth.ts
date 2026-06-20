@@ -3,6 +3,7 @@ import { getContext, setContext } from "svelte";
 
 let _keycloak: Keycloak | null = null;
 let _initialized = false;
+let _roles: string[] = [];
 
 export interface KeycloakConfig {
     url: string;
@@ -14,10 +15,12 @@ export interface AuthState {
     authenticated: boolean;
     user: { sub: string; name: string } | null;
     token: string | null;
+    roles: string[];
 }
 
-export function initKeycloak(config: KeycloakConfig): Keycloak {
+export function initKeycloak(config?: KeycloakConfig): Keycloak {
     if (_keycloak) return _keycloak;
+    if (!config) throw new Error("Keycloak config required");
 
     _keycloak = new Keycloak(config);
 
@@ -45,10 +48,19 @@ export async function checkAuth(config: KeycloakConfig): Promise<AuthState> {
             checkLoginIframe: false,
         });
         _initialized = true;
+
+        if (authenticated && kc.tokenParsed) {
+            const resourceAccess = kc.tokenParsed.resource_access as Record<
+                string,
+                { roles?: string[] }
+            > | undefined;
+            _roles = resourceAccess?.[config.clientId]?.roles ?? [];
+        }
+
         return getAuthState();
     } catch (e) {
         _initialized = true;
-        return { authenticated: false, user: null, token: null };
+        return { authenticated: false, user: null, token: null, roles: [] };
     }
 }
 
@@ -76,7 +88,7 @@ export async function getToken(): Promise<string | null> {
 export function getAuthState(): AuthState {
     const kc = _keycloak;
     if (!kc || !kc.authenticated) {
-        return { authenticated: false, user: null, token: null };
+        return { authenticated: false, user: null, token: null, roles: [] };
     }
     return {
         authenticated: true,
@@ -89,11 +101,24 @@ export function getAuthState(): AuthState {
                 "",
         },
         token: kc.token || null,
+        roles: _roles,
     };
 }
 
 export function isAuthenticated(): boolean {
     return _keycloak?.authenticated ?? false;
+}
+
+export function hasRole(role: string): boolean {
+    return _roles.includes(role);
+}
+
+export function hasAnyRole(...roles: string[]): boolean {
+    return roles.some((r) => _roles.includes(r));
+}
+
+export function getRoles(): string[] {
+    return _roles;
 }
 
 export function authFetch(

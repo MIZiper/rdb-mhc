@@ -1,4 +1,9 @@
-export *  from "./lib/auth";
+export {
+    checkAuth, login, logout, getToken, getAuthState,
+    isAuthenticated, authFetch, setAuthContext, getAuthContext,
+    hasRole, hasAnyRole, getRoles,
+} from "./lib/auth";
+export type { KeycloakConfig, AuthState } from "./lib/auth";
 
 export type { ItemMeta } from "./schema";
 

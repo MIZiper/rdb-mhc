@@ -41,6 +41,7 @@
             creator_name: data.creator_name,
             creator_sub: data.creator_sub,
             status: data.status,
+            visibility: data.visibility || "public",
         };
 
         processor = registry.getProcessor(item.data_type || "");

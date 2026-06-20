@@ -25,6 +25,9 @@ class NodeMetaRead(BaseModel):
     status: str = Field(
         "draft", description="Item status: draft, pending_review, published, archived"
     )
+    visibility: str = Field(
+        "public", description="Visibility level: public, internal, confidential"
+    )
 
 class NodeDetailRead(NodeMetaRead):
     data: dict
@@ -35,6 +38,9 @@ class NodeCreate(BaseModel):
     title: str
     description: str
     tag_ids: list[int] = []
+    visibility: str = Field(
+        "public", description="Visibility level: public, internal, confidential"
+    )
 
 class NodeUpdate(BaseModel):
     title: Optional[str] = None
@@ -42,6 +48,9 @@ class NodeUpdate(BaseModel):
     tag_ids: Optional[list[int]] = None
     status: Optional[str] = Field(
         None, description="Item status: draft, pending_review, published, archived"
+    )
+    visibility: Optional[str] = Field(
+        None, description="Visibility level: public, internal, confidential"
     )
 
 class NodeStatusUpdate(BaseModel):

@@ -29,6 +29,7 @@
         creator_name: null,
         creator_sub: null,
         status: "draft",
+        visibility: "public",
     });
     let tagSelectorOpen: boolean = $state(false);
 
@@ -55,6 +56,7 @@
                     title: item.title,
                     description: item.description,
                     tag_ids: item.tags.map((e) => e.id),
+                    visibility: item.visibility,
                 }),
             });
 

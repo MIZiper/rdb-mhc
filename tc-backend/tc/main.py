@@ -1,6 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from tc.db.connection import init_pool, close_pool
+from tc.auth.keycloak import get_optional_user
 import os
 
 from tc.api.node_op import router as node_router
@@ -39,6 +40,27 @@ app.include_router(config_router, prefix="/api")
 app.include_router(node_router, prefix="/api")
 app.include_router(typed_router, prefix="/api")
 app.include_router(push_router, prefix="/api")
+
+from fastapi import APIRouter
+
+permissions_router = APIRouter(prefix="/permissions")
+
+
+@permissions_router.get("")
+async def get_my_permissions(
+    user=Depends(get_optional_user),
+):
+    if user is None:
+        return {"authenticated": False, "roles": []}
+    return {
+        "authenticated": True,
+        "sub": user["sub"],
+        "name": user["name"],
+        "roles": user.get("roles", []),
+    }
+
+
+app.include_router(permissions_router, prefix="/api")
 
 if __name__ == "__main__":
     import uvicorn

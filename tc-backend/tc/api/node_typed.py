@@ -10,10 +10,34 @@ from asyncpg.connection import Connection
 from tc.db.connection import get_db
 from tc.models import NodeMetaRead, NodeMetaList
 from tc.models.typed_node import NodeData, NodeDataRead, NodeDataPayload, NodeTypedCreate
-from tc.auth.keycloak import get_current_user
+from tc.auth.keycloak import get_optional_user
+from tc.auth.permissions import (
+    require_role,
+    require_any_role,
+    check_edit_node,
+    can_see_node,
+    ROLE_CREATE,
+    ROLE_EDIT_ANY,
+)
 
 router = APIRouter(prefix="/nodes")
 
+
+def _visibility_filter(
+    user: Optional[dict], table_alias: str = "n", use_and: bool = False
+) -> tuple[str, list]:
+    prefix = "AND" if use_and else "WHERE"
+    if user is None:
+        return f"{prefix} COALESCE({table_alias}.visibility, 'public') = 'public'", []
+    roles = user.get("roles", [])
+    from tc.auth.permissions import ROLE_READ_ALL
+    if ROLE_READ_ALL in roles:
+        return "", []
+    clause = f"{prefix} ("
+    clause += f"COALESCE({table_alias}.visibility, 'public') = 'public' "
+    clause += f"OR COALESCE({table_alias}.visibility, 'public') = ANY($1) "
+    clause += f"OR {table_alias}.creator_sub = $2)"
+    return clause, [list(roles), user["sub"]]
 
 
 @router.get("/types/{data_type}", response_model=NodeMetaList)
@@ -22,21 +46,25 @@ async def list_nodes_by_type(
     conn: Connection = Depends(get_db),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, le=100),
+    user=Depends(get_optional_user),
 ):
     offset = (page - 1) * page_size
 
-    sql = """
+    v_clause, v_args = _visibility_filter(user, "n", use_and=True)
+
+    sql = f"""
         SELECT id, title, description, updated_at, content, content_type,
-               creator_name, creator_sub, status
-        FROM nodes
-        WHERE content_type = $1
+               creator_name, creator_sub, status,
+               COALESCE(visibility, 'public') AS visibility
+        FROM nodes n
+        WHERE content_type = $1 {v_clause}
         ORDER BY updated_at DESC
         LIMIT $2 OFFSET $3
     """
-    params = (data_type, page_size, offset)
+    params = [data_type, page_size, offset] + v_args
 
-    count_sql = "SELECT COUNT(*) FROM nodes WHERE content_type = $1"
-    count_result = await conn.fetchval(count_sql, data_type)
+    count_sql = f"SELECT COUNT(*) FROM nodes n WHERE content_type = $1 {v_clause}"
+    count_result = await conn.fetchval(count_sql, *([data_type] + v_args))
 
     nodes_rows = await conn.fetch(sql, *params)
     node_ids = [row["id"] for row in nodes_rows]
@@ -59,6 +87,7 @@ async def list_nodes_by_type(
             creator_name=r.get("creator_name"),
             creator_sub=r.get("creator_sub"),
             status=r.get("status", "draft"),
+            visibility=r.get("visibility", "public"),
         )
         for r in nodes_rows
     }
@@ -70,16 +99,17 @@ async def list_nodes_by_type(
 
     return NodeMetaList(items=[result_map[nid] for nid in node_ids], total=count_result)
 
+
 @router.post("/typed", response_model=NodeMetaRead)
 async def add_node_with_content(
     node: NodeTypedCreate,
     conn: Connection = Depends(get_db),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role(ROLE_CREATE)),
 ):
     row = await conn.fetchrow(
         """INSERT INTO nodes (title, description, content, content_type,
-                              creator_sub, creator_name, status)
-           VALUES ($1, $2, $3, $4, $5, $6, 'draft')
+                              creator_sub, creator_name, status, visibility)
+           VALUES ($1, $2, $3, $4, $5, $6, 'draft', $7)
            RETURNING id, updated_at""",
         node.title,
         node.description,
@@ -87,6 +117,7 @@ async def add_node_with_content(
         node.data_type,
         user["sub"],
         user["name"],
+        node.visibility,
     )
     if not row:
         raise HTTPException(status_code=500, detail="Failed to create node")
@@ -106,17 +137,33 @@ async def add_node_with_content(
         creator_name=user["name"],
         creator_sub=user["sub"],
         status="draft",
+        visibility=node.visibility,
     )
 
 
 @router.get("/{node_id}/data", response_model=NodeDataRead)
-async def get_node_data(node_id: UUID, conn: Connection = Depends(get_db)):
+async def get_node_data(
+    node_id: UUID,
+    conn: Connection = Depends(get_db),
+    user=Depends(get_optional_user),
+):
     row = await conn.fetchrow(
         """SELECT id, title, description, content, content_type, updated_at,
-                  creator_name, creator_sub, status
+                  creator_name, creator_sub, status,
+                  COALESCE(visibility, 'public') AS visibility
            FROM nodes WHERE id=$1""", node_id
     )
     if row is None:
+        raise HTTPException(status_code=404, detail="Node not found")
+
+    if user is None and row.get("visibility", "public") != "public":
+        raise HTTPException(status_code=404, detail="Node not found")
+    if user is not None and not can_see_node(
+        user.get("roles", []),
+        row.get("visibility", "public"),
+        row.get("creator_sub"),
+        user["sub"],
+    ):
         raise HTTPException(status_code=404, detail="Node not found")
 
     content = row["content"]
@@ -136,6 +183,7 @@ async def get_node_data(node_id: UUID, conn: Connection = Depends(get_db)):
         creator_name=row.get("creator_name"),
         creator_sub=row.get("creator_sub"),
         status=row.get("status", "draft"),
+        visibility=row.get("visibility", "public"),
     )
 
 
@@ -144,7 +192,7 @@ async def patch_node_data(
     node_id: UUID,
     updates: dict = Body(..., description="Partial data updates"),
     conn: Connection = Depends(get_db),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_any_role(ROLE_EDIT_ANY)),
 ):
     row = await conn.fetchrow(
         """SELECT id, title, description, content, content_type, updated_at,
@@ -154,11 +202,7 @@ async def patch_node_data(
     if row is None:
         raise HTTPException(status_code=404, detail="Node not found")
 
-    if row["creator_sub"] is not None and row["creator_sub"] != user["sub"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the creator can edit this node",
-        )
+    check_edit_node(user, row.get("creator_sub"))
 
     existing_content = row["content"] or {}
 
@@ -188,7 +232,8 @@ async def patch_node_data(
     updated_row = await conn.fetchrow(
         """UPDATE nodes SET content=$1, content_type=$2, updated_at=NOW()
            WHERE id=$3
-           RETURNING updated_at, title, description, creator_name, creator_sub, status""",
+           RETURNING updated_at, title, description, creator_name, creator_sub, status,
+                     COALESCE(visibility, 'public') AS visibility""",
         content_dict,
         validated_data.type,
         node_id,
@@ -207,6 +252,7 @@ async def patch_node_data(
         creator_name=updated_row.get("creator_name"),
         creator_sub=updated_row.get("creator_sub"),
         status=updated_row.get("status", "draft"),
+        visibility=updated_row.get("visibility", "public"),
     )
 
 
@@ -215,7 +261,7 @@ async def ingest_node_data(
     node_id: UUID,
     payload: NodeDataPayload,
     conn: Connection = Depends(get_db),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_any_role(ROLE_EDIT_ANY)),
 ):
     existing = await conn.fetchrow(
         """SELECT id, creator_sub, creator_name, status
@@ -224,17 +270,14 @@ async def ingest_node_data(
     if existing is None:
         raise HTTPException(status_code=404, detail="Node not found")
 
-    if existing["creator_sub"] is not None and existing["creator_sub"] != user["sub"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the creator can update this node",
-        )
+    check_edit_node(user, existing.get("creator_sub"))
 
     content_dict = payload.content.model_dump()
     row = await conn.fetchrow(
         """UPDATE nodes SET content=$1, content_type=$2, updated_at=NOW()
            WHERE id=$3
-           RETURNING updated_at, title, description, creator_name, creator_sub, status""",
+           RETURNING updated_at, title, description, creator_name, creator_sub, status,
+                     COALESCE(visibility, 'public') AS visibility""",
         content_dict,
         payload.content.type,
         node_id,
@@ -253,4 +296,5 @@ async def ingest_node_data(
         creator_name=row.get("creator_name"),
         creator_sub=row.get("creator_sub"),
         status=row.get("status", "draft"),
+        visibility=row.get("visibility", "public"),
     )

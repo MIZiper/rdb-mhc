@@ -40,6 +40,7 @@
                     title: item.title,
                     description: item.description,
                     tag_ids: item.tags.map((e) => e.id),
+                    visibility: item.visibility,
                     content: content,
                     data_type: processor.type,
                 }),

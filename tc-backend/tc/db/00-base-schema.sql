@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS nodes (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     creator_signature VARCHAR(20), -- can be hash of creator_signature
+    visibility VARCHAR NOT NULL DEFAULT 'public',
     valid BOOLEAN NOT NULL DEFAULT TRUE
 );
 CREATE TRIGGER node_updated_at_trigger

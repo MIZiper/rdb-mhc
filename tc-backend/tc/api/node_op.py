@@ -11,9 +11,29 @@ from asyncpg.connection import Connection
 from tc.db.connection import get_db
 from tc.models import NodeMetaRead, NodeMetaList, NodeCreate, NodeUpdate, NodeStatusUpdate
 from tc.services.metahub_client import expand_tag_ids
-from tc.auth.keycloak import get_current_user, get_optional_user, require_reviewer
+from tc.auth.keycloak import get_current_user, get_optional_user
+from tc.auth.permissions import (
+    require_role,
+    require_any_role,
+    check_edit_node,
+    can_see_node,
+    ROLE_CREATE,
+    ROLE_EDIT_ANY,
+    ROLE_READ_ALL,
+    ROLE_REVIEW,
+)
 
 router = APIRouter(prefix="/nodes")
+
+
+def _base_select() -> str:
+    return """SELECT id, title, description, updated_at,
+        to_jsonb(n) ->> 'content_type' AS content_type,
+        to_jsonb(n) ->> 'creator_name' AS creator_name,
+        to_jsonb(n) ->> 'creator_sub' AS creator_sub,
+        to_jsonb(n) ->> 'status' AS status,
+        COALESCE(to_jsonb(n) ->> 'visibility', 'public') AS visibility
+     FROM nodes n"""
 
 
 def _row_to_meta(r, tag_ids: list[int] = None) -> NodeMetaRead:
@@ -27,6 +47,35 @@ def _row_to_meta(r, tag_ids: list[int] = None) -> NodeMetaRead:
         creator_name=r.get("creator_name"),
         creator_sub=r.get("creator_sub"),
         status=r.get("status") or "draft",
+        visibility=r.get("visibility") or "public",
+    )
+
+
+def _visibility_filter(
+    user: Optional[dict], table_alias: str = "n", use_and: bool = False
+) -> tuple[str, list]:
+    prefix = "AND" if use_and else "WHERE"
+    if user is None:
+        return f"{prefix} COALESCE({table_alias}.visibility, 'public') = 'public'", []
+    roles = user.get("roles", [])
+    if ROLE_READ_ALL in roles:
+        return "", []
+    sub = user["sub"]
+    clause = f"{prefix} ("
+    clause += f"COALESCE({table_alias}.visibility, 'public') = 'public' "
+    clause += f"OR COALESCE({table_alias}.visibility, 'public') = ANY($1) "
+    clause += f"OR {table_alias}.creator_sub = $2)"
+    return clause, [list(roles), sub]
+
+
+def _can_see_row(row: dict, user: Optional[dict]) -> bool:
+    if user is None:
+        return row.get("visibility", "public") == "public"
+    return can_see_node(
+        user.get("roles", []),
+        row.get("visibility", "public"),
+        row.get("creator_sub"),
+        user["sub"],
     )
 
 
@@ -36,12 +85,13 @@ async def list_nodes(
     page: int = Query(1, ge=1),
     page_size: int = Query(10, le=100),
     q: Optional[str] = Query(None, description="Search by content"),
-    user: Optional[dict] = Depends(get_optional_user),
+    user=Depends(get_optional_user),
 ):
     offset = (page - 1) * page_size
 
     if q and q.strip():
-        sql = """
+        v_clause, v_args = _visibility_filter(user, "n", use_and=True)
+        sql = f"""
             SELECT
                 id,
                 title,
@@ -51,23 +101,25 @@ async def list_nodes(
                 to_jsonb(n) ->> 'creator_name' AS creator_name,
                 to_jsonb(n) ->> 'creator_sub' AS creator_sub,
                 to_jsonb(n) ->> 'status' AS status,
+                COALESCE(to_jsonb(n) ->> 'visibility', 'public') AS visibility,
                 ts_headline('english', title, query, 'StartSel=<strong>, StopSel=</strong>') as title_highlight,
                 ts_rank(search_vector, query) as relevance
             FROM nodes n, to_tsquery('english', $1) as query
-            WHERE search_vector @@ query
+            WHERE search_vector @@ query {v_clause}
             ORDER BY relevance DESC
             LIMIT $2 OFFSET $3
         """
-        params = (q, page_size, offset)
+        params = [q, page_size, offset] + v_args
 
-        count_sql = """
-            SELECT COUNT(*) FROM nodes, to_tsquery('english', $1) as query
-            WHERE search_vector @@ query
+        count_sql = f"""
+            SELECT COUNT(*) FROM nodes n, to_tsquery('english', $1) as query
+            WHERE search_vector @@ query {v_clause}
         """
-        count_result = await conn.fetchval(count_sql, q)
+        count_result = await conn.fetchval(count_sql, *([q] + v_args))
 
     else:
-        sql = """
+        v_clause, v_args = _visibility_filter(user, "n")
+        sql = f"""
             SELECT
                 id,
                 title,
@@ -77,16 +129,18 @@ async def list_nodes(
                 to_jsonb(n) ->> 'creator_name' AS creator_name,
                 to_jsonb(n) ->> 'creator_sub' AS creator_sub,
                 to_jsonb(n) ->> 'status' AS status,
+                COALESCE(to_jsonb(n) ->> 'visibility', 'public') AS visibility,
                 NULL as title_highlight,
                 NULL as relevance
             FROM nodes n
+            {v_clause}
             ORDER BY updated_at DESC
             LIMIT $1 OFFSET $2
         """
-        params = (page_size, offset)
+        params = [page_size, offset] + v_args
 
-        count_sql = "SELECT COUNT(*) FROM nodes"
-        count_result = await conn.fetchval(count_sql)
+        count_sql = f"SELECT COUNT(*) FROM nodes n {v_clause}"
+        count_result = await conn.fetchval(count_sql, *v_args)
 
     nodes_rows = await conn.fetch(sql, *params)
     node_ids = [row["id"] for row in nodes_rows]
@@ -118,6 +172,7 @@ async def search_nodes_by_tags(
     mode: Optional[str] = Query(
         "exact", description="Tag search mode: exact | ancestors | expanded"
     ),
+    user=Depends(get_optional_user),
 ):
     if not tag_ids:
         return NodeMetaList(items=[], total=0)
@@ -127,7 +182,13 @@ async def search_nodes_by_tags(
         search_tag_ids = await expand_tag_ids(tag_ids)
 
     limit_clause = "LIMIT $2" if limit else ""
-    args = [search_tag_ids, limit] if limit else [search_tag_ids]
+    args: list = [search_tag_ids]
+    if limit:
+        args.append(limit)
+
+    v_clause, v_args = _visibility_filter(user, "n", use_and=True)
+    if v_clause:
+        args.extend(v_args)
 
     query = f"""
         SELECT
@@ -139,6 +200,7 @@ async def search_nodes_by_tags(
             to_jsonb(n) ->> 'creator_name' AS creator_name,
             to_jsonb(n) ->> 'creator_sub' AS creator_sub,
             to_jsonb(n) ->> 'status' AS status,
+            COALESCE(to_jsonb(n) ->> 'visibility', 'public') AS visibility,
             COUNT(nt.tag_id) AS match_count,
             (
                 SELECT array_agg(t2.tag_id)
@@ -147,7 +209,7 @@ async def search_nodes_by_tags(
             ) AS tag_ids
         FROM nodes n
         JOIN node_tags nt ON n.id = nt.node_id
-        WHERE nt.tag_id = ANY($1)
+        WHERE nt.tag_id = ANY($1) {v_clause}
         GROUP BY n.id
         ORDER BY match_count DESC, n.id ASC
         {limit_clause}
@@ -162,18 +224,21 @@ async def search_nodes_by_tags(
 
 
 @router.get("/{node_id}/meta", response_model=NodeMetaRead)
-async def get_node_meta(node_id: UUID, conn: Connection = Depends(get_db)):
+async def get_node_meta(
+    node_id: UUID,
+    conn: Connection = Depends(get_db),
+    user=Depends(get_optional_user),
+):
     row = await conn.fetchrow(
-        """SELECT id, title, description, updated_at,
-            to_jsonb(n) ->> 'content_type' AS content_type,
-            to_jsonb(n) ->> 'creator_name' AS creator_name,
-            to_jsonb(n) ->> 'creator_sub' AS creator_sub,
-            to_jsonb(n) ->> 'status' AS status
-           FROM nodes n WHERE id=$1""",
+        f"""{_base_select()} WHERE id=$1""",
         node_id,
     )
     if row is None:
         raise HTTPException(status_code=404, detail="Node not found")
+
+    if not _can_see_row(row, user):
+        raise HTTPException(status_code=404, detail="Node not found")
+
     tags_rows = await conn.fetch(
         "SELECT tag_id FROM node_tags WHERE node_id=$1", node_id
     )
@@ -186,20 +251,16 @@ async def update_node_meta(
     node_id: UUID,
     node: NodeUpdate,
     conn: Connection = Depends(get_db),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_any_role(ROLE_EDIT_ANY)),
 ):
     existing = await conn.fetchrow(
-        """SELECT id, creator_sub, creator_name, status, content_type
+        """SELECT id, creator_sub, creator_name, status, content_type, visibility
            FROM nodes WHERE id=$1""", node_id
     )
     if existing is None:
         raise HTTPException(status_code=404, detail="Node not found")
 
-    if existing["creator_sub"] is not None and existing["creator_sub"] != user["sub"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the creator can edit this node",
-        )
+    check_edit_node(user, existing.get("creator_sub"))
 
     sets = []
     args = []
@@ -217,18 +278,21 @@ async def update_node_meta(
         sets.append(f"status=${idx}")
         args.append(node.status)
         idx += 1
+    if node.visibility is not None:
+        sets.append(f"visibility=${idx}")
+        args.append(node.visibility)
+        idx += 1
     if sets:
         sets.append("updated_at=NOW()")
         sql = f"""UPDATE nodes SET {', '.join(sets)} WHERE id=${idx}
                   RETURNING id, title, description, updated_at, content_type,
-                            creator_name, creator_sub, status"""
+                            creator_name, creator_sub, status,
+                            COALESCE(visibility, 'public') AS visibility"""
         args.append(node_id)
         row = await conn.fetchrow(sql, *args)
     else:
         row = await conn.fetchrow(
-            """SELECT id, title, description, updated_at, content_type,
-                      creator_name, creator_sub, status
-               FROM nodes WHERE id=$1""",
+            f"""{_base_select()} WHERE id=$1""",
             node_id,
         )
 
@@ -253,16 +317,17 @@ async def update_node_meta(
 async def add_node_with_tags(
     node: NodeCreate,
     conn: Connection = Depends(get_db),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_role(ROLE_CREATE)),
 ):
     row = await conn.fetchrow(
-        """INSERT INTO nodes (title, description, creator_sub, creator_name, status)
-           VALUES ($1, $2, $3, $4, 'draft')
+        """INSERT INTO nodes (title, description, creator_sub, creator_name, status, visibility)
+           VALUES ($1, $2, $3, $4, 'draft', $5)
            RETURNING id, updated_at""",
         node.title,
         node.description,
         user["sub"],
         user["name"],
+        node.visibility,
     )
     if not row:
         raise HTTPException(status_code=500, detail="Failed to create node")
@@ -282,6 +347,7 @@ async def add_node_with_tags(
         creator_name=user["name"],
         creator_sub=user["sub"],
         status="draft",
+        visibility=node.visibility,
     )
 
 
@@ -314,7 +380,8 @@ async def list_my_nodes(
             to_jsonb(n) ->> 'content_type' AS content_type,
             to_jsonb(n) ->> 'creator_name' AS creator_name,
             to_jsonb(n) ->> 'creator_sub' AS creator_sub,
-            to_jsonb(n) ->> 'status' AS status
+            to_jsonb(n) ->> 'status' AS status,
+            COALESCE(to_jsonb(n) ->> 'visibility', 'public') AS visibility
         FROM nodes n
         WHERE creator_sub = $1 {status_where}
         ORDER BY updated_at DESC
@@ -348,7 +415,7 @@ async def update_node_status(
     node_id: UUID,
     body: NodeStatusUpdate,
     conn: Connection = Depends(get_db),
-    user: dict = Depends(require_reviewer),
+    user: dict = Depends(require_role(ROLE_REVIEW)),
 ):
     existing = await conn.fetchrow(
         """SELECT id, creator_sub
@@ -361,7 +428,8 @@ async def update_node_status(
         """UPDATE nodes SET status=$1, updated_at=NOW()
            WHERE id=$2
            RETURNING id, title, description, updated_at, content_type,
-                     creator_name, creator_sub, status""",
+                     creator_name, creator_sub, status,
+                     COALESCE(visibility, 'public') AS visibility""",
         body.status,
         node_id,
     )

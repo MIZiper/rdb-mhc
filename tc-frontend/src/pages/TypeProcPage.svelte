@@ -74,6 +74,7 @@
                 creator_name: e.creator_name,
                 creator_sub: e.creator_sub,
                 status: e.status,
+                visibility: e.visibility || "public",
             }));
             totalItems = data.total || 0;
 

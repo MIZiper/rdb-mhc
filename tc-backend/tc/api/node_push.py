@@ -1,10 +1,9 @@
 from uuid import UUID
-import hashlib
 import secrets
 from fastapi import APIRouter, Depends, HTTPException, Body, status
 from asyncpg.connection import Connection
 from tc.db.connection import get_db
-from tc.auth.keycloak import get_current_user, get_optional_user
+from tc.auth.permissions import require_any_role, check_edit_node, ROLE_EDIT_ANY
 
 router = APIRouter(prefix="/nodes")
 
@@ -19,7 +18,7 @@ async def push_to_node(
     data: dict = Body(...),
     mode: str = Body("w"),
     conn: Connection = Depends(get_db),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_any_role(ROLE_EDIT_ANY)),
 ):
     node = await conn.fetchrow(
         """SELECT id, creator_sub, frozen, validate_key, content
@@ -29,13 +28,7 @@ async def push_to_node(
     if node is None:
         raise HTTPException(status_code=404, detail="Node not found")
 
-    creator_sub = node["creator_sub"]
-    if creator_sub:
-        if creator_sub != user["sub"]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You are not authorized to push to this node.",
-            )
+    check_edit_node(user, node.get("creator_sub"))
 
     if node["frozen"]:
         raise HTTPException(
@@ -74,7 +67,7 @@ async def push_to_node(
 async def reset_validate_key(
     node_id: UUID,
     conn: Connection = Depends(get_db),
-    user: dict = Depends(get_current_user),
+    user: dict = Depends(require_any_role(ROLE_EDIT_ANY)),
 ):
     existing = await conn.fetchrow(
         "SELECT id, creator_sub FROM nodes WHERE id=$1", node_id
@@ -82,11 +75,7 @@ async def reset_validate_key(
     if existing is None:
         raise HTTPException(status_code=404, detail="Node not found")
 
-    if existing["creator_sub"] is not None and existing["creator_sub"] != user["sub"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the creator can reset the validate key",
-        )
+    check_edit_node(user, existing.get("creator_sub"))
 
     new_key = generate_validate_key()
     result = await conn.execute(
