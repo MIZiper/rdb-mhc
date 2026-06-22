@@ -78,9 +78,7 @@
             {#if item.visibility && item.visibility !== "public"}
                 <Badge color={visibilityColor(item.visibility)} class="ms-1">{item.visibility}</Badge>
             {/if}
-            {#if item.status}
-                <Badge color={statusColor(item.status)} class="ms-1">{statusLabel(item.status)}</Badge>
-            {/if}
+            <Badge color={statusColor(item.status)} class="ms-1">{statusLabel(item.status)}</Badge>
             {#if canEdit}
                 <NavLink href="/items/{item.id}?edit=1" class="ms-1">Edit</NavLink>
             {/if}

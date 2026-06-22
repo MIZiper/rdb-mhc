@@ -103,10 +103,7 @@ async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ) -> dict:
     if not _is_configured():
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Keycloak is not configured",
-        )
+        return {"sub": "", "name": "Anonymous", "roles": []}
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -137,7 +134,7 @@ async def get_current_user(
 async def get_optional_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ) -> Optional[dict]:
-    if not _is_configured() or credentials is None:
+    if credentials is None:
         return None
     try:
         return await get_current_user(credentials)

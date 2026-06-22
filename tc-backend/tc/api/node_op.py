@@ -42,10 +42,10 @@ def _row_to_meta(r, tag_ids: list[int] = None) -> NodeMetaRead:
         updated_at=r["updated_at"],
         tag_ids=tag_ids or [],
         data_type=r["content_type"],
-        creator_name=r.get("creator_name"),
-        creator_sub=r.get("creator_sub"),
-        status=r.get("status") or "draft",
-        visibility=r.get("visibility") or "public",
+        creator_name=r["creator_name"],
+        creator_sub=r["creator_sub"],
+        status=r["status"],
+        visibility=r["visibility"],
     )
 
 
@@ -73,11 +73,11 @@ def _visibility_clause(
 
 def _can_see_row(row: dict, user: Optional[dict]) -> bool:
     if user is None:
-        return row.get("visibility", "public") == "public"
+        return row["visibility"] == "public"
     return can_see_node(
         user.get("roles", []),
-        row.get("visibility", "public"),
-        row.get("creator_sub"),
+        row["visibility"],
+        row["creator_sub"],
         user["sub"],
     )
 

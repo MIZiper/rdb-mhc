@@ -82,10 +82,10 @@ async def list_nodes_by_type(
             updated_at=r["updated_at"],
             tag_ids=[],
             data_type=r["content_type"],
-            creator_name=r.get("creator_name"),
-            creator_sub=r.get("creator_sub"),
-            status=r.get("status", "draft"),
-            visibility=r.get("visibility", "public"),
+            creator_name=r["creator_name"],
+            creator_sub=r["creator_sub"],
+            status=r["status"],
+            visibility=r["visibility"],
         )
         for r in nodes_rows
     }
@@ -154,12 +154,12 @@ async def get_node_data(
     if row is None:
         raise HTTPException(status_code=404, detail="Node not found")
 
-    if user is None and row.get("visibility", "public") != "public":
+    if user is None and row["visibility"] != "public":
         raise HTTPException(status_code=404, detail="Node not found")
     if user is not None and not can_see_node(
         user.get("roles", []),
-        row.get("visibility", "public"),
-        row.get("creator_sub"),
+        row["visibility"],
+        row["creator_sub"],
         user["sub"],
     ):
         raise HTTPException(status_code=404, detail="Node not found")
@@ -178,10 +178,10 @@ async def get_node_data(
         data_type=row["content_type"],
         updated_at=row["updated_at"],
         tag_ids=tag_ids,
-        creator_name=row.get("creator_name"),
-        creator_sub=row.get("creator_sub"),
-        status=row.get("status", "draft"),
-        visibility=row.get("visibility", "public"),
+        creator_name=row["creator_name"],
+        creator_sub=row["creator_sub"],
+        status=row["status"],
+        visibility=row["visibility"],
     )
 
 
@@ -247,10 +247,10 @@ async def patch_node_data(
         data_type=validated_data.type,
         updated_at=updated_row["updated_at"],
         tag_ids=tag_ids,
-        creator_name=updated_row.get("creator_name"),
-        creator_sub=updated_row.get("creator_sub"),
-        status=updated_row.get("status", "draft"),
-        visibility=updated_row.get("visibility", "public"),
+        creator_name=updated_row["creator_name"],
+        creator_sub=updated_row["creator_sub"],
+        status=updated_row["status"],
+        visibility=updated_row["visibility"],
     )
 
 
@@ -291,8 +291,8 @@ async def ingest_node_data(
         data_type=payload.content.type,
         updated_at=row["updated_at"],
         tag_ids=tag_ids,
-        creator_name=row.get("creator_name"),
-        creator_sub=row.get("creator_sub"),
-        status=row.get("status", "draft"),
-        visibility=row.get("visibility", "public"),
+        creator_name=row["creator_name"],
+        creator_sub=row["creator_sub"],
+        status=row["status"],
+        visibility=row["visibility"],
     )
