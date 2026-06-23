@@ -45,14 +45,13 @@
     token: null,
     roles: [],
   });
-  setAuthContext({ authenticated: false, user: null, token: null, roles: [] });
+  setAuthContext(() => auth);
   let kcConfig: KeycloakConfig | null = $state(null);
 
   onMount(async () => {
     const config = await fetch("/api/config").then(r => r.json());
     kcConfig = { url: config.kc_url, realm: config.kc_realm, clientId: config.kc_client_id };
     auth = await checkAuth(kcConfig);
-    setAuthContext($state.snapshot(auth));
   });
 
   async function doLogin() { if (kcConfig) await login(kcConfig); }

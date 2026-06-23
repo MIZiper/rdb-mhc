@@ -150,10 +150,10 @@ export function authFetch(
 
 const AUTH_KEY = Symbol("auth");
 
-export function setAuthContext(state: AuthState) {
-    setContext(AUTH_KEY, state);
+export function setAuthContext(getter: () => AuthState) {
+    setContext(AUTH_KEY, getter);
 }
 
 export function getAuthContext(): AuthState {
-    return getContext(AUTH_KEY) as AuthState;
+    return (getContext(AUTH_KEY) as () => AuthState)();
 }
