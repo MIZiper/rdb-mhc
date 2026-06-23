@@ -26,11 +26,11 @@ router = APIRouter(prefix="/nodes")
 
 def _base_select() -> str:
     return """SELECT id, title, description, updated_at,
-        to_jsonb(n) ->> 'content_type' AS content_type,
-        to_jsonb(n) ->> 'creator_name' AS creator_name,
-        to_jsonb(n) ->> 'creator_sub' AS creator_sub,
-        to_jsonb(n) ->> 'status' AS status,
-        COALESCE(to_jsonb(n) ->> 'visibility', 'public') AS visibility
+        n.content_type,
+        n.creator_name,
+        n.creator_sub,
+        n.status,
+        n.visibility
      FROM nodes n"""
 
 
@@ -59,14 +59,14 @@ def _visibility_clause(
     """
     prefix = "AND" if use_and else "WHERE"
     if user is None:
-        return f"{prefix} COALESCE({table_alias}.visibility, 'public') = 'public'", []
+        return f"{prefix} {table_alias}.visibility = 'public'", []
     roles = user.get("roles", [])
     if ROLE_READ_ALL in roles:
         return "", []
     sub = user["sub"]
     clause = f"{prefix} ("
-    clause += f"COALESCE({table_alias}.visibility, 'public') = 'public' "
-    clause += f"OR ('nodes:visibility:' || COALESCE({table_alias}.visibility, 'public')) = ANY($1::text[]) "
+    clause += f"{table_alias}.visibility = 'public' "
+    clause += f"OR ('nodes:visibility:' || {table_alias}.visibility) = ANY($1::text[]) "
     clause += f"OR {table_alias}.creator_sub = $2)"
     return clause, [list(roles), sub]
 
@@ -106,11 +106,11 @@ async def list_nodes(
                 title,
                 description,
                 updated_at,
-                to_jsonb(n) ->> 'content_type' AS content_type,
-                to_jsonb(n) ->> 'creator_name' AS creator_name,
-                to_jsonb(n) ->> 'creator_sub' AS creator_sub,
-                to_jsonb(n) ->> 'status' AS status,
-                COALESCE(to_jsonb(n) ->> 'visibility', 'public') AS visibility,
+                n.content_type,
+                n.creator_name,
+                n.creator_sub,
+                n.status,
+                n.visibility,
                 ts_headline('english', title, query, 'StartSel=<strong>, StopSel=</strong>') as title_highlight,
                 ts_rank(search_vector, query) as relevance
             FROM nodes n, to_tsquery('english', ${q_idx}) as query
@@ -137,11 +137,11 @@ async def list_nodes(
                 title,
                 description,
                 updated_at,
-                to_jsonb(n) ->> 'content_type' AS content_type,
-                to_jsonb(n) ->> 'creator_name' AS creator_name,
-                to_jsonb(n) ->> 'creator_sub' AS creator_sub,
-                to_jsonb(n) ->> 'status' AS status,
-                COALESCE(to_jsonb(n) ->> 'visibility', 'public') AS visibility,
+                n.content_type,
+                n.creator_name,
+                n.creator_sub,
+                n.status,
+                n.visibility,
                 NULL as title_highlight,
                 NULL as relevance
             FROM nodes n
@@ -209,11 +209,11 @@ async def search_nodes_by_tags(
             n.title,
             n.description,
             n.updated_at,
-            to_jsonb(n) ->> 'content_type' AS content_type,
-            to_jsonb(n) ->> 'creator_name' AS creator_name,
-            to_jsonb(n) ->> 'creator_sub' AS creator_sub,
-            to_jsonb(n) ->> 'status' AS status,
-            COALESCE(to_jsonb(n) ->> 'visibility', 'public') AS visibility,
+            n.content_type,
+            n.creator_name,
+            n.creator_sub,
+            n.status,
+            n.visibility,
             COUNT(nt.tag_id) AS match_count,
             (
                 SELECT array_agg(t2.tag_id)
@@ -300,7 +300,7 @@ async def update_node_meta(
         sql = f"""UPDATE nodes SET {', '.join(sets)} WHERE id=${idx}
                   RETURNING id, title, description, updated_at, content_type,
                             creator_name, creator_sub, status,
-                            COALESCE(visibility, 'public') AS visibility"""
+                            visibility"""
         args.append(node_id)
         row = await conn.fetchrow(sql, *args)
     else:
@@ -390,11 +390,11 @@ async def list_my_nodes(
     sql = f"""
         SELECT
             id, title, description, updated_at,
-            to_jsonb(n) ->> 'content_type' AS content_type,
-            to_jsonb(n) ->> 'creator_name' AS creator_name,
-            to_jsonb(n) ->> 'creator_sub' AS creator_sub,
-            to_jsonb(n) ->> 'status' AS status,
-            COALESCE(to_jsonb(n) ->> 'visibility', 'public') AS visibility
+            n.content_type,
+            n.creator_name,
+            n.creator_sub,
+            n.status,
+            n.visibility
         FROM nodes n
         WHERE creator_sub = $1 {status_where}
         ORDER BY updated_at DESC
@@ -442,7 +442,7 @@ async def update_node_status(
            WHERE id=$2
            RETURNING id, title, description, updated_at, content_type,
                      creator_name, creator_sub, status,
-                     COALESCE(visibility, 'public') AS visibility""",
+                     visibility""",
         body.status,
         node_id,
     )

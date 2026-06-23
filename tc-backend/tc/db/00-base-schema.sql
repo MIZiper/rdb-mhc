@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS nodes (
     creator_name VARCHAR(255),
     status VARCHAR(50) NOT NULL DEFAULT 'draft',
     visibility VARCHAR NOT NULL DEFAULT 'public',
+    content JSONB NOT NULL DEFAULT '{}',
+    content_type VARCHAR(50),
     valid BOOLEAN NOT NULL DEFAULT TRUE
 );
 -- status values: draft, pending_review, published, archived

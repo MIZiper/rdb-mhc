@@ -26,14 +26,14 @@ def _visibility_clause(
 ) -> tuple[str, list]:
     prefix = "AND" if use_and else "WHERE"
     if user is None:
-        return f"{prefix} COALESCE({table_alias}.visibility, 'public') = 'public'", []
+        return f"{prefix} {table_alias}.visibility = 'public'", []
     from tc.auth.permissions import ROLE_READ_ALL as _READ_ALL
     roles = user.get("roles", [])
     if _READ_ALL in roles:
         return "", []
     clause = f"{prefix} ("
-    clause += f"COALESCE({table_alias}.visibility, 'public') = 'public' "
-    clause += f"OR ('nodes:visibility:' || COALESCE({table_alias}.visibility, 'public')) = ANY($1::text[]) "
+    clause += f"{table_alias}.visibility = 'public' "
+    clause += f"OR ('nodes:visibility:' || {table_alias}.visibility) = ANY($1::text[]) "
     clause += f"OR {table_alias}.creator_sub = $2)"
     return clause, [list(roles), user["sub"]]
 
@@ -53,7 +53,7 @@ async def list_nodes_by_type(
     sql = f"""
         SELECT id, title, description, updated_at, content, content_type,
                creator_name, creator_sub, status,
-               COALESCE(visibility, 'public') AS visibility
+               visibility
         FROM nodes n
         WHERE content_type = $3 {v_clause}
         ORDER BY updated_at DESC
@@ -148,7 +148,7 @@ async def get_node_data(
     row = await conn.fetchrow(
         """SELECT id, title, description, content, content_type, updated_at,
                   creator_name, creator_sub, status,
-                  COALESCE(visibility, 'public') AS visibility
+                  visibility
            FROM nodes WHERE id=$1""", node_id
     )
     if row is None:
@@ -165,7 +165,7 @@ async def get_node_data(
         raise HTTPException(status_code=404, detail="Node not found")
 
     content = row["content"]
-    if content is None or content == {}:
+    if not content:
         raise HTTPException(status_code=404, detail="Node has no data")
     tags_rows = await conn.fetch("SELECT tag_id FROM node_tags WHERE node_id=$1", node_id)
     tag_ids = [r["tag_id"] for r in tags_rows]
@@ -231,7 +231,7 @@ async def patch_node_data(
         """UPDATE nodes SET content=$1, content_type=$2, updated_at=NOW()
            WHERE id=$3
            RETURNING updated_at, title, description, creator_name, creator_sub, status,
-                     COALESCE(visibility, 'public') AS visibility""",
+                     visibility""",
         content_dict,
         validated_data.type,
         node_id,
@@ -275,7 +275,7 @@ async def ingest_node_data(
         """UPDATE nodes SET content=$1, content_type=$2, updated_at=NOW()
            WHERE id=$3
            RETURNING updated_at, title, description, creator_name, creator_sub, status,
-                     COALESCE(visibility, 'public') AS visibility""",
+                     visibility""",
         content_dict,
         payload.content.type,
         node_id,
