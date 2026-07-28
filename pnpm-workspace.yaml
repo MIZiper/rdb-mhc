@@ -1,3 +1,7 @@
 packages:
   - "mh-frontend"
   - "tc-frontend"
+overrides:
+  "@mizip/metahub": "workspace:*"
+allowBuilds:
+  esbuild: true
