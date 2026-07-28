@@ -17,16 +17,16 @@ permissions:
   id-token: write
 
 jobs:
-  publish-tc:
+  build:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: tc-backend
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v7
       with:
         python-version: '3.x'
     - name: Install dependencies
@@ -35,5 +35,19 @@ jobs:
         pip install build
     - name: Build package
       run: python -m build
+    - uses: actions/upload-artifact@v7
+      with:
+        name: dist
+        path: dist/
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/download-artifact@v7
+      with:
+        name: dist
+        path: dist/
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@release/v1
