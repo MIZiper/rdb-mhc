@@ -27,6 +27,7 @@
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json"
   },
   "devDependencies": {
+    "@sveltejs/package": "^2.5.7",
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
     "@tsconfig/svelte": "^5.0.4",
     "svelte": "^5.23.1",
@@ -35,10 +36,10 @@
     "vite": "^6.3.1"
   },
   "dependencies": {
+    "@mizip/metahub": "^0.0.2-0",
     "@sveltestrap/sveltestrap": "^7.1.0",
     "keycloak-js": "^26.2.2",
-    "sv-router": "^0.12.0",
-    "@mizip/metahub": "^0.0.2-0"
+    "sv-router": "^0.12.0"
   },
   "exports": {
     ".": {
@@ -52,7 +53,7 @@
     "src"
   ],
   "peerDependencies": {
-    "svelte": "^4.0.0 || ^5.0.0",
-    "keycloak-js": "^26.2.2"
+    "keycloak-js": "^26.2.2",
+    "svelte": "^4.0.0 || ^5.0.0"
   }
 }
