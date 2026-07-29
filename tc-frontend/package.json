@@ -1,6 +1,6 @@
 {
   "name": "@mizip/tc",
-  "version": "0.0.2-dev.0",
+  "version": "0.0.2-dev.1",
   "description": "TemplateClient for RDB resource browsing",
   "keywords": [
     "rdb",
@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/miziper/rdb-mhc.git"
+    "url": "git+https://github.com/MIZiper/rdb-mhc.git"
   },
   "license": "Apache-2.0",
   "author": "MIZiper",
