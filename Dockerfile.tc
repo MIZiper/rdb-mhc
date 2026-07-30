@@ -1,0 +1,42 @@
+# Stage 1: Build the tc-frontend (Svelte 5)
+FROM node:22-slim AS frontend-builder
+WORKDIR /app
+RUN npm install -g pnpm
+COPY tc-frontend/package.json tc-frontend/pnpm-workspace.yaml ./
+RUN pnpm install
+COPY tc-frontend/ ./
+RUN pnpm build
+
+
+
+# Stage 2: Set up the Python environment
+FROM python:3.12-slim
+WORKDIR /app
+
+# Install Python dependencies (layer cached when pyproject.toml unchanged)
+RUN pip install pip-tools
+COPY tc-backend/pyproject.toml tc-backend/README.md ./
+RUN pip-compile pyproject.toml --output-file=requirements.txt
+RUN pip install -r requirements.txt
+
+# Copy backend source and install the package
+COPY tc-backend/ ./backend-src
+RUN pip install ./backend-src
+
+# Copy built frontend from Stage 1
+COPY --from=frontend-builder /app/dist /app/frontend-dist
+
+ENV FRONTEND_DIST=/app/frontend-dist
+ENV POSTGRES_HOST=localhost
+ENV POSTGRES_PORT=5432
+ENV POSTGRES_DB=tc
+ENV POSTGRES_USER=postgres
+ENV POSTGRES_PASSWORD=password
+ENV KC_SERVER_URL=""
+ENV KC_SERVER_URL_PUBLIC=""
+ENV KC_REALM="miz"
+ENV KC_CLIENT_ID="tc"
+
+EXPOSE 8000
+
+CMD ["uvicorn", "tc.main:app", "--host", "0.0.0.0", "--port", "8000"]

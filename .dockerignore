@@ -1,0 +1,14 @@
+**/node_modules
+**/dist
+**/dist-lib
+**/__pycache__
+**/*.pyc
+**/.venv
+**/uv.lock
+.git
+.gitignore
+*.md
+!tc-backend/README.md
+!tc-frontend/README.md
+!mh-backend/README.md
+!mh-frontend/README.md

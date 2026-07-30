@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from tc.db.connection import init_pool, close_pool
 from tc.auth.keycloak import get_optional_user
 import os
@@ -61,6 +63,21 @@ async def get_my_permissions(
 
 
 app.include_router(permissions_router, prefix="/api")
+
+FRONTEND_DIST = os.getenv("FRONTEND_DIST")
+if FRONTEND_DIST is not None and os.path.isdir(FRONTEND_DIST):
+    app.mount("/static", StaticFiles(directory=FRONTEND_DIST), name="static")
+
+    @app.get("/")
+    def serve_index():
+        return FileResponse(os.path.join(FRONTEND_DIST, "index.html"))
+
+    @app.get("/{full_path:path}")
+    def serve_spa(full_path: str):
+        file_path = os.path.join(FRONTEND_DIST, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(FRONTEND_DIST, "index.html"))
 
 if __name__ == "__main__":
     import uvicorn
