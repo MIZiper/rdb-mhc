@@ -9,8 +9,9 @@
 name: Upload Python Package - TC
 
 on:
-  release:
-    types: [published]
+  push:
+    paths:
+    - tc-backend/pyproject.toml
 
 permissions:
   contents: read

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 import os
-from tc.auth.keycloak import KC_SERVER_URL, KC_REALM, KC_CLIENT_ID, get_optional_user
+from tc.auth.keycloak import KC_SERVER_URL_PUBLIC, KC_REALM, KC_CLIENT_ID, get_optional_user
 
 router = APIRouter(prefix="/config")
 
@@ -10,7 +10,7 @@ async def get_config(
     user=Depends(get_optional_user),
 ):
     config = {
-        "kc_url": KC_SERVER_URL,
+        "kc_url": KC_SERVER_URL_PUBLIC,
         "kc_realm": KC_REALM,
         "kc_client_id": KC_CLIENT_ID,
         "mh_host": os.getenv("TC_METAHUB", "localhost:8033"),

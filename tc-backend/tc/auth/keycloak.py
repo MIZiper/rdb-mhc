@@ -13,7 +13,9 @@ KC_SERVER_URL = os.getenv("KC_SERVER_URL", "")
 KC_REALM = os.getenv("KC_REALM", "")
 KC_CLIENT_ID = os.getenv("KC_CLIENT_ID", "")
 
-_ISSUER = f"{KC_SERVER_URL.rstrip('/')}/realms/{KC_REALM}" if KC_SERVER_URL and KC_REALM else ""
+KC_SERVER_URL_PUBLIC = os.getenv("KC_SERVER_URL_PUBLIC", "") or KC_SERVER_URL
+
+_ISSUER = f"{KC_SERVER_URL_PUBLIC.rstrip('/')}/realms/{KC_REALM}" if KC_SERVER_URL_PUBLIC and KC_REALM else ""
 
 _CERNS_CACHE: dict = {}
 _CERNS_EXPIRY: float = 0.0
