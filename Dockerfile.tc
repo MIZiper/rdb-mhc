@@ -37,6 +37,10 @@ ENV KC_SERVER_URL_PUBLIC=""
 ENV KC_REALM="miz"
 ENV KC_CLIENT_ID="tc"
 
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 EXPOSE 8000
 
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["uvicorn", "tc.main:app", "--host", "0.0.0.0", "--port", "8000"]
