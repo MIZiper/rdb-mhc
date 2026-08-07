@@ -1,7 +1,7 @@
 {
   "name": "@mizip/tc",
   "version": "0.0.2-dev.3",
-  "description": "TemplateClient for RDB resource browsing",
+  "description": "TemplateClient for RDB resource browsing.",
   "keywords": [
     "rdb",
     "client",

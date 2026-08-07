@@ -1,7 +1,7 @@
 [project]
 name = "miz-tc"
 version = "0.0.2.dev3"
-description = "TemplateClient for RDB resource browsing"
+description = "TemplateClient for RDB resource browsing."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
