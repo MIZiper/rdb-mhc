@@ -4,8 +4,9 @@
 name: Node.js Package - MetaHub
 
 on:
-  release:
-    types: [published]
+  push:
+    paths:
+    - mh-frontend/package.json
 
 jobs:
   publish:

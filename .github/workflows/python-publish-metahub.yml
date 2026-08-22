@@ -9,8 +9,9 @@
 name: Upload Python Package - MetaHub
 
 on:
-  release:
-    types: [published]
+  push:
+    paths:
+    - mh-backend/pyproject.toml
 
 permissions:
   contents: read

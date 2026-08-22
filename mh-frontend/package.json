@@ -1,6 +1,6 @@
 {
   "name": "@mizip/metahub",
-  "version": "0.0.2-dev.1",
+  "version": "0.0.2",
   "description": "MetaHub for RDB tag selection",
   "keywords": [
     "rdb",
