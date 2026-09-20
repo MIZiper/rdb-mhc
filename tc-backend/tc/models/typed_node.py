@@ -23,6 +23,21 @@ class GenericData(BaseModel):
     type: Literal["generic"] = "generic"
     content: dict[str, Any] = Field(..., description="Generic JSON content")
 
+
+class FormulaDef(BaseModel):
+    name: str = Field("", description="Formula label")
+    expression: str = Field("", description="Expression in terms of x and coefficients")
+    coefficients: dict[str, float] = Field(default_factory=dict)
+    xmin: float = Field(-10, description="Domain lower bound")
+    xmax: float = Field(10, description="Domain upper bound")
+    note: str = Field("", description="Short explanation")
+
+
+class FormulaData(BaseModel):
+    type: Literal["formula"] = "formula"
+    formulas: list[FormulaDef] = Field(..., description="List of formula definitions")
+
+
 class AnyData(RootModel[Any]):
     """Accept any JSON-serializable value without wrapper fields.
 
@@ -34,7 +49,7 @@ class AnyData(RootModel[Any]):
     root: Any
 
 
-NodeData = TableData | ImageData | GenericData | AnyData
+NodeData = TableData | ImageData | GenericData | FormulaData | AnyData
 
 
 

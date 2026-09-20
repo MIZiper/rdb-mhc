@@ -20,6 +20,9 @@
   import TabularEditor from "./modules/TabularEditor.svelte";
   import TabularViewer from "./modules/TabularViewer.svelte";
   import TabularTypeViewer from "./modules/TabularTypeViewer.svelte";
+  import FormulaEditor from "./modules/FormulaEditor.svelte";
+  import FormulaViewer from "./modules/FormulaViewer.svelte";
+  import FormulaTypeViewer from "./modules/FormulaTypeViewer.svelte";
   import {
     checkAuth,
     login,
@@ -37,6 +40,9 @@
   );
   registry.register(
     new BaseProcessor("Tabular.v00", "Tabular Data", TabularViewer, TabularEditor, TabularTypeViewer),
+  );
+  registry.register(
+    new BaseProcessor("Formula.v00", "Formula Model", FormulaViewer, FormulaEditor, FormulaTypeViewer),
   );
 
   let auth: AuthState = $state({

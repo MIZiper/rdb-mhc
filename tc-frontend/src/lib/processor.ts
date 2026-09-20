@@ -4,6 +4,10 @@ export interface EditorExports {
     getContent: () => Record<string, any>
 }
 
+export interface EditorProps {
+    initial?: Record<string, any> | null,
+}
+
 export interface ViewerProps {
     content_in: Record<string, any>,
 }
@@ -17,7 +21,7 @@ export class BaseProcessor {
         public type: string,
         public name: string,
         public viewer: Component<ViewerProps> | null,
-        public editor: Component<{}, EditorExports> | null,
+        public editor: Component<any, EditorExports> | null,
         public typeViewer: Component<TypeViewerProps> | null = null,
     ) { }
 }

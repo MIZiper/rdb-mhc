@@ -40,6 +40,11 @@
     let saving = $state(false);
     let saveError = $state("");
 
+    let contentEditMode = $state(false);
+    let contentEditor: any = $state(null);
+    let contentSaving = $state(false);
+    let contentError = $state("");
+
     function checkCanEdit(): boolean {
         if (hasRole("nodes:edit_any")) return true;
         if (!item) return false;
@@ -91,6 +96,42 @@
     function cancelEdit() {
         editMode = false;
         saveError = "";
+    }
+
+    function enterContentEdit() {
+        contentEditMode = true;
+        contentError = "";
+    }
+
+    function cancelContentEdit() {
+        contentEditMode = false;
+        contentError = "";
+    }
+
+    async function saveContent() {
+        if (!item || !contentEditor) return;
+        contentSaving = true;
+        contentError = "";
+        try {
+            const content = contentEditor.getContent();
+            const res = await authFetch(`/api/nodes/${item_id}/data`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(content),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                contentError = err.detail || "Failed to save content";
+                return;
+            }
+            const data = await res.json();
+            item = { ...item, content: data.content, update_time: new Date(data.updated_at) };
+            contentEditMode = false;
+        } catch (e: any) {
+            contentError = e.message;
+        } finally {
+            contentSaving = false;
+        }
     }
 
     function useTags(_tags: TagMeta[]) {
@@ -145,7 +186,25 @@
                 {#if !processor}
                     <p>Registered type: [{item.data_type}] (no viewer found)</p>
                     <pre>{JSON.stringify(item.content, null, 2)}</pre>
+                {:else if contentEditMode}
+                    <div class="content-edit">
+                        <processor.editor bind:this={contentEditor} initial={item.content} />
+                        {#if contentError}
+                            <div class="text-danger mt-2">{contentError}</div>
+                        {/if}
+                        <div class="mt-2">
+                            <Button color="primary" disabled={contentSaving} onclick={saveContent}>
+                                {contentSaving ? "Saving..." : "Save Content"}
+                            </Button>
+                            <Button color="secondary" class="ms-2" onclick={cancelContentEdit}>Cancel</Button>
+                        </div>
+                    </div>
                 {:else}
+                    {#if checkCanEdit() && processor.editor}
+                        <div class="mb-2">
+                            <Button color="link" size="sm" onclick={enterContentEdit}>Edit Content</Button>
+                        </div>
+                    {/if}
                     <processor.viewer content_in={item.content} />
                 {/if}
             {:else}

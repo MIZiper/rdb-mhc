@@ -4,6 +4,7 @@ The basic implementation for RDB, with typed data.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Body, status
+from pydantic import TypeAdapter
 from typing import Optional
 from uuid import UUID
 from asyncpg.connection import Connection
@@ -19,6 +20,8 @@ from tc.auth.permissions import (
 )
 
 router = APIRouter(prefix="/nodes")
+
+_node_data_adapter = TypeAdapter(NodeData)
 
 
 def _visibility_clause(
@@ -220,7 +223,7 @@ async def patch_node_data(
     merged_content = deep_merge(existing_content, updates)
 
     try:
-        validated_data = NodeData.model_validate(merged_content)
+        validated_data = _node_data_adapter.validate_python(merged_content)
     except Exception as e:
         raise HTTPException(
             status_code=400, detail=f"Invalid data structure after merge: {str(e)}"
@@ -228,12 +231,11 @@ async def patch_node_data(
 
     content_dict = validated_data.model_dump()
     updated_row = await conn.fetchrow(
-        """UPDATE nodes SET content=$1, content_type=$2, updated_at=NOW()
-           WHERE id=$3
+        """UPDATE nodes SET content=$1, updated_at=NOW()
+           WHERE id=$2
            RETURNING updated_at, title, description, creator_name, creator_sub, status,
                      visibility""",
         content_dict,
-        validated_data.type,
         node_id,
     )
     tags_rows = await conn.fetch("SELECT tag_id FROM node_tags WHERE node_id=$1", node_id)
@@ -244,7 +246,7 @@ async def patch_node_data(
         title=updated_row["title"],
         description=updated_row["description"],
         content=validated_data,
-        data_type=validated_data.type,
+        data_type=row["content_type"],
         updated_at=updated_row["updated_at"],
         tag_ids=tag_ids,
         creator_name=updated_row["creator_name"],
