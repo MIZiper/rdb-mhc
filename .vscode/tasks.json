@@ -11,7 +11,7 @@
 				"podman run -it --rm --name mh_postgres",
 				"-e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=metahub -p 5433:5432",
 				"-v ./metahub/db/:/docker-entrypoint-initdb.d/",
-				"postgres"
+				"docker.io/library/postgres"
 			],
 		},
 		{
@@ -68,7 +68,7 @@
 				"podman run -it --rm --name tc_postgres",
 				"-e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=tc -p 5430:5432",
 				"-v ./tc/db/:/docker-entrypoint-initdb.d/",
-				"postgres"
+				"docker.io/library/postgres"
 			],
 		},
 		{
@@ -79,8 +79,8 @@
 				"env": {
 					"POSTGRES_PORT": "5430",
 					"KC_SERVER_URL": "http://localhost:8080",
-					"KC_REALM": "miz",
-					"KC_CLIENT_ID": "tc-frontend",
+					"KC_REALM": "master",
+					"KC_CLIENT_ID": "miz",
 				}
 			},
 			"command": [
