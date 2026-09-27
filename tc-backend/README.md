@@ -5,6 +5,20 @@
 - `TC_METAHUB` — MetaHub service host (default: `localhost:8033`)
 - `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` / `POSTGRES_HOST` / `POSTGRES_PORT`
 - `KC_SERVER_URL` / `KC_REALM` / `KC_CLIENT_ID` — Keycloak connection
+- `TC_STORAGE_ROOT` — directory for uploaded file bytes (default: `./storage`)
+- `TC_MAX_UPLOAD_MB` — maximum upload size in MB (default: `25`)
+
+---
+
+## Stored files
+
+Uploads are written under `TC_STORAGE_ROOT` in a per-module subfolder
+(`{TC_STORAGE_ROOT}/{data_type}/...`), with metadata in the `files` table
+(see `tc/db/02-file-schema.sql`). Use `POST /api/files?data_type=...`
+(multipart `file`), then reference the returned id from node content via a
+`file_id` field; files are linked to the node on save and inherit its
+visibility. `GET /api/files/{id}` and `GET /api/files/{id}/thumb` serve the
+bytes.
 
 ---
 

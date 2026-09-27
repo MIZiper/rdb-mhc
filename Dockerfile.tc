@@ -36,6 +36,8 @@ ENV KC_SERVER_URL=""
 ENV KC_SERVER_URL_PUBLIC=""
 ENV KC_REALM="miz"
 ENV KC_CLIENT_ID="tc"
+ENV TC_STORAGE_ROOT=/app/storage
+VOLUME ["/app/storage"]
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

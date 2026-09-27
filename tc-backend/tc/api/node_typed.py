@@ -18,10 +18,21 @@ from tc.auth.permissions import (
     can_see_node,
     ROLE_CREATE,
 )
+from tc.services.file_link import extract_file_ids
 
 router = APIRouter(prefix="/nodes")
 
 _node_data_adapter = TypeAdapter(NodeData)
+
+
+async def _link_file_refs(conn: Connection, node_id, content) -> None:
+    """Associate uploaded files referenced by ``file_id`` fields to a node."""
+    ids = extract_file_ids(content)
+    if not ids:
+        return
+    await conn.execute(
+        "UPDATE files SET node_id=$1 WHERE id = ANY($2::uuid[])", node_id, ids
+    )
 
 
 def _visibility_clause(
@@ -127,6 +138,8 @@ async def add_node_with_content(
         await conn.execute(
             "INSERT INTO node_tags (node_id, tag_id) VALUES ($1, $2)", row["id"], tag_id
         )
+
+    await _link_file_refs(conn, row["id"], node.content)
 
     return NodeMetaRead(
         id=row["id"],
@@ -238,6 +251,7 @@ async def patch_node_data(
         content_dict,
         node_id,
     )
+    await _link_file_refs(conn, node_id, content_dict)
     tags_rows = await conn.fetch("SELECT tag_id FROM node_tags WHERE node_id=$1", node_id)
     tag_ids = [r["tag_id"] for r in tags_rows]
 
@@ -282,6 +296,7 @@ async def ingest_node_data(
         payload.content.type,
         node_id,
     )
+    await _link_file_refs(conn, node_id, content_dict)
     tags_rows = await conn.fetch("SELECT tag_id FROM node_tags WHERE node_id=$1", node_id)
     tag_ids = [r["tag_id"] for r in tags_rows]
 

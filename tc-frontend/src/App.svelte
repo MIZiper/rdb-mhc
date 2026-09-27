@@ -23,6 +23,9 @@
   import FormulaEditor from "./modules/FormulaEditor.svelte";
   import FormulaViewer from "./modules/FormulaViewer.svelte";
   import FormulaTypeViewer from "./modules/FormulaTypeViewer.svelte";
+  import ImageEditor from "./modules/ImageEditor.svelte";
+  import ImageViewer from "./modules/ImageViewer.svelte";
+  import ImageTypeViewer from "./modules/ImageTypeViewer.svelte";
   import {
     checkAuth,
     login,
@@ -43,6 +46,9 @@
   );
   registry.register(
     new BaseProcessor("Formula.v00", "Formula Model", FormulaViewer, FormulaEditor, FormulaTypeViewer),
+  );
+  registry.register(
+    new BaseProcessor("Image.v00", "Image Gallery", ImageViewer, ImageEditor, ImageTypeViewer),
   );
 
   let auth: AuthState = $state({

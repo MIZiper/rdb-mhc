@@ -10,3 +10,6 @@ wheels/
 .venv
 
 tc/db/z*.sql*
+
+# Uploaded files (local dev storage root)
+storage/

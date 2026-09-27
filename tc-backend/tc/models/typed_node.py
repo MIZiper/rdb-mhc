@@ -38,6 +38,20 @@ class FormulaData(BaseModel):
     formulas: list[FormulaDef] = Field(..., description="List of formula definitions")
 
 
+class ImageEntry(BaseModel):
+    file_id: str = Field(..., description="Stored file UUID")
+    caption: str = Field("", description="Image description")
+    original_name: Optional[str] = Field(None, description="Original file name")
+    mime_type: Optional[str] = Field(None, description="MIME type")
+    width: Optional[int] = Field(None, description="Pixel width")
+    height: Optional[int] = Field(None, description="Pixel height")
+
+
+class ImageGalleryData(BaseModel):
+    type: Literal["image_gallery"] = "image_gallery"
+    images: list[ImageEntry] = Field(..., description="Ordered gallery images")
+
+
 class AnyData(RootModel[Any]):
     """Accept any JSON-serializable value without wrapper fields.
 
@@ -49,7 +63,7 @@ class AnyData(RootModel[Any]):
     root: Any
 
 
-NodeData = TableData | ImageData | GenericData | FormulaData | AnyData
+NodeData = TableData | ImageData | ImageGalleryData | GenericData | FormulaData | AnyData
 
 
 

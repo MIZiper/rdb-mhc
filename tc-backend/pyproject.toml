@@ -8,8 +8,10 @@ dependencies = [
     "asyncpg>=0.31.0",
     "fastapi>=0.121.2",
     "httpx>=0.28.1",
+    "pillow>=12.3.0",
     "pydantic>=2.12.4",
     "python-jose[cryptography]>=3.3.0",
+    "python-multipart>=0.0.32",
     "uvicorn>=0.40.0",
 ]
 

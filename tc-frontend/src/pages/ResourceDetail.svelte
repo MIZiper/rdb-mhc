@@ -21,6 +21,7 @@
     import { construct_tags_by_ids, fetch_tags_info } from "./FetchMetaHubTags";
     import { registry, type BaseProcessor } from "../lib/processor";
     import { authFetch, hasRole, getAuthContext } from "../lib/auth";
+    import { deleteImage } from "../lib/imageStore";
 
     let router: any = getContext("router");
     let params = router.route.getParams("/items/:id");
@@ -125,6 +126,13 @@
                 return;
             }
             const data = await res.json();
+            const removed =
+                typeof contentEditor.getRemovedFileIds === "function"
+                    ? contentEditor.getRemovedFileIds()
+                    : [];
+            for (const fileId of removed) {
+                deleteImage(fileId);
+            }
             item = { ...item, content: data.content, update_time: new Date(data.updated_at) };
             contentEditMode = false;
         } catch (e: any) {
