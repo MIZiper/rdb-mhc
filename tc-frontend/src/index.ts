@@ -1,23 +1,23 @@
 export {
-    checkAuth, login, logout, getToken, getAuthState,
-    isAuthenticated, authFetch, setAuthContext, getAuthContext,
-    hasRole, hasAnyRole, getRoles, authReady,
+    checkAuth,
+    login,
+    logout,
+    getToken,
+    getAuthState,
+    isAuthenticated,
+    authFetch,
+    setAuthContext,
+    getAuthContext,
+    hasRole,
+    hasAnyRole,
+    getRoles,
+    authReady,
 } from "./lib/auth";
 export type { KeycloakConfig, AuthState } from "./lib/auth";
 
-export type { ItemMeta } from "./schema";
-
-export { getConfig } from "./utils/GetRuntimeEnv";
-export { fetch_tags_info } from "./pages/FetchMetaHubTags";
-
-export {
-    fetchTypes,
-    fetchFieldKeys,
-    queryNodes,
-    aggregateNodes,
-    batchNodeData,
-} from "./lib/api";
 export type {
+    ItemMeta,
+    ItemDetail,
     TypeDescriptor,
     FieldSpec,
     FieldKey,
@@ -25,13 +25,37 @@ export type {
     NodeQuery,
     AggregateRequest,
     AggregateGroup,
+} from "./types";
+
+export { getConfig } from "./lib/utils/env";
+
+export {
+    fetchTypes,
+    fetchType,
+    fetchFieldKeys,
+    fetchFieldValues,
+    queryNodes,
+    aggregateNodes,
+    batchNodeData,
+    fetchTagsInfo,
+    constructTagsById,
 } from "./lib/api";
 
-export { registry, BaseProcessor, type ViewerProps, type EditorExports } from "./lib/processor";
+export {
+    registry,
+    BaseProcessor,
+    type ViewerProps,
+    type EditorProps,
+    type EditorExports,
+    type TypeViewerProps,
+} from "./modules/registry";
 
-export { default as NewResource } from "./lib/NewResource.svelte";
-export { default as ResourceItem } from "./lib/ResourceItem.svelte";
+export { default as NewResource } from "./components/NewResource.svelte";
+export { default as ResourceItem } from "./components/ResourceItem.svelte";
+export { default as Pagination } from "./components/Pagination.svelte";
 export { default as ResourceDetail } from "./pages/ResourceDetail.svelte";
 export { default as MainPage } from "./pages/MainPage.svelte";
 export { default as TagSearchResult } from "./pages/TagSearchResult.svelte";
 export { default as NewTypedResource } from "./pages/NewTypedResource.svelte";
+export { default as QueryPage } from "./pages/QueryPage.svelte";
+export { default as AggregatePage } from "./pages/AggregatePage.svelte";

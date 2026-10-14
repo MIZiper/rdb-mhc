@@ -10,16 +10,11 @@
     } from "@sveltestrap/sveltestrap";
     import { getContext, onMount } from "svelte";
     import { TagsSelector, type TagMeta } from "@mizip/metahub";
-    import ResourceItem from "../lib/ResourceItem.svelte";
-    import type { ItemMeta } from "../schema";
-    import { fetch_tags_info, construct_tags_by_ids } from "./FetchMetaHubTags";
-    import {
-        fetchFieldKeys,
-        fetchTypes,
-        queryNodes,
-        type FieldKey,
-        type TypeDescriptor,
-    } from "../lib/api";
+    import ResourceItem from "../components/ResourceItem.svelte";
+    import type { ItemMeta } from "../types";
+    import { fetchTagsInfo, constructTagsById } from "../lib/api/metahub";
+    import { fetchFieldKeys, fetchTypes, queryNodes } from "../lib/api";
+    import type { FieldKey, TypeDescriptor } from "../types";
 
     let metahub_host = (getContext("mh_host") as string) || "";
 
@@ -106,14 +101,14 @@
             const uniqueTagIds = [
                 ...new Set(data.items.flatMap((it: any) => it.tag_ids)),
             ] as number[];
-            const cache = await fetch_tags_info(metahub_host, uniqueTagIds);
+            const cache = await fetchTagsInfo(metahub_host, uniqueTagIds);
 
             items = data.items.map((e: any) => ({
                 id: e.id,
                 title: e.title,
                 description: e.description,
                 update_time: new Date(e.updated_at),
-                tags: construct_tags_by_ids(e.tag_ids, cache),
+                tags: constructTagsById(e.tag_ids, cache),
                 data_type: e.data_type,
                 creator_name: e.creator_name,
                 creator_sub: e.creator_sub,

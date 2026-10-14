@@ -1,132 +1,56 @@
 <script lang="ts">
     import {
         Button,
-        ButtonGroup,
         Col,
         Container,
         Icon,
         Input,
         ListGroup,
-        Pagination,
-        PaginationItem,
-        PaginationLink,
         Row,
         Tooltip,
     } from "@sveltestrap/sveltestrap";
-    import ResourceItem from "../lib/ResourceItem.svelte";
-    import type { ItemMeta } from "../schema";
-    import { getContext, onMount } from "svelte";
-    import { fetch_tags_info, construct_tags_by_ids } from "./FetchMetaHubTags";
+    import { getContext } from "svelte";
     import { searchParams } from "sv-router";
+    import ResourceItem from "../components/ResourceItem.svelte";
+    import Pagination from "../components/Pagination.svelte";
     import { authFetch, getAuthContext } from "../lib/auth";
+    import { useNodeList } from "../lib/useNodeList.svelte";
 
     let router: any = getContext("router");
+    const metahubHost = (getContext("mh_host") as string) || "";
+    const list = useNodeList(metahubHost, 10);
 
     let searchBind = $state("");
     let qSearch = $state("");
 
-    let items: ItemMeta[] = $state([]);
-    let loading = $state(false);
-    let error = $state(null);
-
-    const pageSize = 10;
-    const RANGE = 3;
-    let currentPage = $state(1);
-    let totalItems = $state(0);
-    let totalPages = $derived(Math.ceil(totalItems / pageSize));
-    let pageNumbers = $derived.by(() => {
-        const start = Math.max(1, currentPage - RANGE);
-        const end = Math.min(totalPages, currentPage + RANGE);
-
-        const pages = [];
-        for (let i = start; i <= end; i++) {
-            pages.push(i);
-        }
-        return pages;
-    });
-
-    let metahub_host = (getContext("mh_host") as string) || "";
-    async function loadData(q: string, page: number) {
-        loading = true;
-        error = null;
-
-        try {
-            const apiParams = {
-                page: page.toString(),
-                q: q || "",
-                page_size: pageSize.toString(),
-            };
-
-            const qs = new URLSearchParams(apiParams).toString();
-            const res = await authFetch(`/api/nodes/?${qs}`);
-            if (!res.ok) throw new Error("Failed to fetch");
-            const data = await res.json();
-
-            const uniqueTagIds = [
-                ...new Set(data.items.flatMap((item: any) => item.tag_ids)),
-            ] as number[];
-
-            const tags_cache = await fetch_tags_info(
-                metahub_host,
-                uniqueTagIds,
-            );
-
-            items = data.items.map((e: any) => ({
-                id: e.id,
-                title: e.title,
-                description: e.description,
-                update_time: new Date(e.updated_at),
-                tags: construct_tags_by_ids(e.tag_ids, tags_cache),
-                data_type: e.data_type,
-                creator_name: e.creator_name,
-                creator_sub: e.creator_sub,
-                status: e.status,
-                visibility: e.visibility || "public",
-            }));
-
-            totalItems = data.total || 0;
-        } catch (err: any) {
-            error = err.message || "Failed to load";
-            console.error(err);
-        } finally {
-            loading = false;
-        }
+    function preprocessTsQuery(input: string): string {
+        const trimmed = input.trim();
+        if (!trimmed) return "";
+        // Already contains tsquery operators: keep as-is.
+        if (/[&|!<->]/.test(trimmed)) return trimmed;
+        return trimmed.split(/\s+/).filter(Boolean).join(" & ");
     }
 
-    function preprocessTsQuery(input: string): string {
-        // 1. 去除首尾空格
-        const trimmed = input.trim();
+    function loadPage(q: string, page: number) {
+        const qs = new URLSearchParams({
+            page: String(page),
+            q,
+            page_size: "10",
+        }).toString();
+        qSearch = q;
+        searchBind = q;
+        list.load(() => authFetch(`/api/nodes/?${qs}`).then((r) => r.json()), page);
+    }
 
-        if (!trimmed) return "";
-
-        // 2. 检查是否包含 Postgres tsquery 的逻辑运算符
-        // 这里涵盖了：与 (&), 或 (|), 非 (!), 以及位移/短语操作符 (<->)
-        const hasOperators = /[&|!<->]/.test(trimmed);
-
-        if (hasOperators) {
-            // 如果已有运算符，我们保持原样，仅返回 trim 后的结果
-            return trimmed;
-        } else {
-            // 3. 如果只是普通的词组（由空格分隔）
-            // 将连续的空格替换为 & 符号
-            // 例如: "apple banana cherry" -> "apple & banana & cherry"
-            return trimmed
-                .split(/\s+/) // 按一个或多个空格分割
-                .filter(Boolean) // 过滤掉可能的空字符串
-                .join(" & "); // 用 & 连接
-        }
+    function navigate(q: string, page: number) {
+        router.navigate("/", { search: { q, page } });
     }
 
     $effect(() => {
-        const q = searchParams.get("q") || "";
-        const page = parseInt(searchParams.get("page") || "1", 10);
+        const q = String(searchParams.get("q") || "");
+        const page = parseInt(String(searchParams.get("page") || "1"), 10);
         const _auth = getAuthContext();
-
-        loadData(String(q), Number(page)).then(() => {
-            qSearch = q;
-            searchBind = q;
-            currentPage = isNaN(page) || page < 1 ? 1 : page;
-        });
+        loadPage(q, isNaN(page) || page < 1 ? 1 : page);
     });
 </script>
 
@@ -138,85 +62,44 @@
                 placeholder="Search by text"
                 bind:value={searchBind}
                 onkeypress={(e) => {
-                    if (e.key == "Enter")
-                        router.navigate("/", {
-                            search: { q: preprocessTsQuery(searchBind) },
-                        });
+                    if (e.key === "Enter")
+                        navigate(preprocessTsQuery(searchBind), 1);
                 }}
             />
         </Col>
         <Col xs="auto">
             <Tooltip target="tsquery-info">
-                Use 'abc', 'abc & def', 'abc | def', 'abc & !def', 'abc:*' ...
+                Use 'abc', 'abc &amp; def', 'abc | def', 'abc &amp; !def', 'abc:*' ...
                 for the query.
             </Tooltip>
             <Icon name="info" id="tsquery-info" />
-            <Button
-                onclick={() =>
-                    router.navigate("/", {
-                        search: { q: preprocessTsQuery(searchBind) },
-                    })}>Search</Button
-            >
+            <Button onclick={() => navigate(preprocessTsQuery(searchBind), 1)}>
+                Search
+            </Button>
         </Col>
     </Row>
 
-    {#if loading}
+    {#if list.loading}
         <p>Loading...</p>
-    {:else if error}
-        <p class="error">Error: {error}</p>
-    {:else if items.length === 0}
+    {:else if list.error}
+        <p class="error">Error: {list.error}</p>
+    {:else if list.items.length === 0}
         <p>No results found.</p>
     {:else}
         <p class="meta">
-            {totalItems} results (Page {currentPage} / {totalPages})
+            {list.total} results (Page {list.page} / {list.totalPages})
         </p>
 
         <ListGroup class="mt-2">
-            {#each items as item}
+            {#each list.items as item}
                 <ResourceItem {item} />
             {/each}
         </ListGroup>
 
-        <Pagination>
-            <PaginationItem disabled={currentPage <= 1}>
-                <PaginationLink
-                    first
-                    href={router.p("/", { search: { q: qSearch, page: 1 } })}
-                />
-            </PaginationItem>
-            <PaginationItem disabled={currentPage <= 1}>
-                <PaginationLink
-                    previous
-                    href={router.p("/", {
-                        search: { q: qSearch, page: currentPage - 1 },
-                    })}
-                />
-            </PaginationItem>
-            {#each pageNumbers as num}
-                <PaginationItem active={num === currentPage}>
-                    <PaginationLink
-                        href={router.p("/", {
-                            search: { q: qSearch, page: num },
-                        })}>{num}</PaginationLink
-                    >
-                </PaginationItem>
-            {/each}
-            <PaginationItem disabled={currentPage >= totalPages}>
-                <PaginationLink
-                    next
-                    href={router.p("/", {
-                        search: { q: qSearch, page: currentPage + 1 },
-                    })}
-                />
-            </PaginationItem>
-            <PaginationItem disabled={currentPage >= totalPages}>
-                <PaginationLink
-                    last
-                    href={router.p("/", {
-                        search: { q: qSearch, page: totalPages },
-                    })}
-                />
-            </PaginationItem>
-        </Pagination>
+        <Pagination
+            page={list.page}
+            totalPages={list.totalPages}
+            onchange={(p) => navigate(qSearch, p)}
+        />
     {/if}
 </Container>

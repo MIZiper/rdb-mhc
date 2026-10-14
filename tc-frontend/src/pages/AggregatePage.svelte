@@ -8,14 +8,8 @@
     } from "@sveltestrap/sveltestrap";
     import { getContext, onMount } from "svelte";
     import { TagsSelector, type TagMeta } from "@mizip/metahub";
-    import {
-        aggregateNodes,
-        fetchFieldKeys,
-        fetchTypes,
-        type AggregateGroup,
-        type FieldKey,
-        type TypeDescriptor,
-    } from "../lib/api";
+    import { aggregateNodes, fetchFieldKeys, fetchTypes } from "../lib/api";
+    import type { AggregateGroup, FieldKey, TypeDescriptor } from "../types";
 
     let metahub_host = (getContext("mh_host") as string) || "";
 

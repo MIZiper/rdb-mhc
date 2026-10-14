@@ -16,12 +16,12 @@
     } from "@sveltestrap/sveltestrap";
 
     import { TagsSelector, type TagMeta } from "@mizip/metahub";
-    import type { ItemDetail } from "../schema";
+    import type { ItemDetail } from "../types";
     import { getContext, onMount } from "svelte";
-    import { construct_tags_by_ids, fetch_tags_info } from "./FetchMetaHubTags";
-    import { registry, type BaseProcessor } from "../lib/processor";
+    import { constructTagsById, fetchTagsInfo } from "../lib/api/metahub";
+    import { registry, type BaseProcessor } from "../modules/registry";
     import { authFetch, hasRole, getAuthContext } from "../lib/auth";
-    import { deleteImage } from "../lib/imageStore";
+    import { deleteImage } from "../lib/api/files";
 
     let router: any = getContext("router");
     let params = router.route.getParams("/items/:id");
@@ -56,14 +56,14 @@
         const res = await authFetch(`/api/nodes/${item_id}/data`);
         const data = await res.json();
 
-        const tags_cache = await fetch_tags_info(metahub_host, data.tag_ids);
+        const tags_cache = await fetchTagsInfo(metahub_host, data.tag_ids);
 
         item = {
             id: data.id,
             title: data.title,
             description: data.description,
             update_time: new Date(data.updated_at),
-            tags: construct_tags_by_ids(data.tag_ids, tags_cache),
+            tags: constructTagsById(data.tag_ids, tags_cache),
             data_type: data.data_type,
             content: data.content,
             creator_name: data.creator_name,
@@ -169,13 +169,13 @@
                 return;
             }
             const data = await res.json();
-            const tags_cache = await fetch_tags_info(metahub_host, data.tag_ids);
+            const tags_cache = await fetchTagsInfo(metahub_host, data.tag_ids);
             item = {
                 ...item,
                 title: data.title,
                 description: data.description,
                 update_time: new Date(data.updated_at),
-                tags: construct_tags_by_ids(data.tag_ids, tags_cache),
+                tags: constructTagsById(data.tag_ids, tags_cache),
                 visibility: data.visibility || "public",
             };
             editMode = false;

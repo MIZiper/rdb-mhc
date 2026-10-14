@@ -10,22 +10,9 @@
 
   import { Router } from "sv-router";
   import { setContext, onMount } from "svelte";
-  import { getConfig } from "./utils/GetRuntimeEnv.js";
+  import { getConfig } from "./lib/utils/env";
   import { router } from "./router";
-
-  import { BaseProcessor, registry } from "./lib/processor.js";
-  import BaseViewer from "./modules/BaseViewer.svelte";
-  import BaseEditor from "./modules/BaseEditor.svelte";
-  import BaseTypeViewer from "./modules/BaseTypeViewer.svelte";
-  import TabularEditor from "./modules/TabularEditor.svelte";
-  import TabularViewer from "./modules/TabularViewer.svelte";
-  import TabularTypeViewer from "./modules/TabularTypeViewer.svelte";
-  import FormulaEditor from "./modules/FormulaEditor.svelte";
-  import FormulaViewer from "./modules/FormulaViewer.svelte";
-  import FormulaTypeViewer from "./modules/FormulaTypeViewer.svelte";
-  import ImageEditor from "./modules/ImageEditor.svelte";
-  import ImageViewer from "./modules/ImageViewer.svelte";
-  import ImageTypeViewer from "./modules/ImageTypeViewer.svelte";
+  import "./modules";
   import {
     checkAuth,
     login,
@@ -33,23 +20,10 @@
     setAuthContext,
     type KeycloakConfig,
     type AuthState,
-  } from "./lib/auth.js";
+  } from "./lib/auth";
 
   setContext("mh_host", getConfig("MH_HOST"));
   setContext("router", router);
-
-  registry.register(
-    new BaseProcessor("Base.v00", "Base Item", BaseViewer, BaseEditor, BaseTypeViewer),
-  );
-  registry.register(
-    new BaseProcessor("Tabular.v00", "Tabular Data", TabularViewer, TabularEditor, TabularTypeViewer),
-  );
-  registry.register(
-    new BaseProcessor("Formula.v00", "Formula Model", FormulaViewer, FormulaEditor, FormulaTypeViewer),
-  );
-  registry.register(
-    new BaseProcessor("Image.v00", "Image Gallery", ImageViewer, ImageEditor, ImageTypeViewer),
-  );
 
   let auth: AuthState = $state({
     authenticated: false,

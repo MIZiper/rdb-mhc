@@ -1,16 +1,12 @@
 from fastapi import Depends, HTTPException, status
 from typing import Optional
 
-from tc.auth.keycloak import get_current_user
+from tc.auth.provider import get_current_user
 
 ROLE_READ_ALL = "nodes:read_all"
 ROLE_CREATE = "nodes:create"
 ROLE_EDIT_ANY = "nodes:edit_any"
 ROLE_REVIEW = "nodes:review"
-
-
-def has_role(user: dict, role: str) -> bool:
-    return role in user.get("roles", [])
 
 
 def require_role(role: str):
@@ -19,19 +15,6 @@ def require_role(role: str):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Role '{role}' required",
-            )
-        return user
-
-    return checker
-
-
-def require_any_role(*roles: str):
-    async def checker(user: dict = Depends(get_current_user)) -> dict:
-        user_roles = set(user.get("roles", []))
-        if not user_roles.intersection(roles):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"One of {roles} required",
             )
         return user
 

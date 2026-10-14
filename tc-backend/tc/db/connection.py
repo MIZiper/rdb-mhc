@@ -1,19 +1,19 @@
-import json
-import os
+"""asyncpg connection pool lifecycle."""
 
-import asyncpg
+from __future__ import annotations
+
+import json
 from typing import AsyncGenerator
 
-pool = None
+import asyncpg
+from asyncpg.connection import Connection
 
-DB_USER = os.getenv("POSTGRES_USER", "postgres")
-DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "password")
-DB_NAME = os.getenv("POSTGRES_DB", "tc")
-DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
-DB_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
+from tc.settings import settings
+
+pool: asyncpg.Pool | None = None
 
 
-async def _init_connection(conn):
+async def _init_connection(conn: Connection) -> None:
     await conn.set_type_codec(
         "jsonb",
         encoder=json.dumps,
@@ -22,26 +22,27 @@ async def _init_connection(conn):
     )
 
 
-async def init_pool():
+async def init_pool() -> None:
     global pool
-
     pool = await asyncpg.create_pool(
-        user=DB_USER,
-        password=DB_PASSWORD,
-        database=DB_NAME,
-        host=DB_HOST,
-        port=DB_PORT,
+        user=settings.postgres_user,
+        password=settings.postgres_password,
+        database=settings.postgres_db,
+        host=settings.postgres_host,
+        port=settings.postgres_port,
         init=_init_connection,
     )
 
 
-async def close_pool():
+async def close_pool() -> None:
     global pool
-
-    if pool:
+    if pool is not None:
         await pool.close()
+        pool = None
 
 
-async def get_db() -> AsyncGenerator[asyncpg.connection.Connection, None]:
+async def get_db() -> AsyncGenerator[Connection, None]:
+    if pool is None:
+        raise RuntimeError("Database pool is not initialized")
     async with pool.acquire() as conn:
         yield conn

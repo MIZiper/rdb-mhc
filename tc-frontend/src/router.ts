@@ -1,9 +1,9 @@
 import { createRouter } from "sv-router";
 import MainPage from "./pages/MainPage.svelte";
 import ResourceDetailPage from "./pages/ResourceDetail.svelte";
-import NewResource from "./lib/NewResource.svelte";
+import NewResource from "./components/NewResource.svelte";
 import TagSearchPage from "./pages/TagSearchResult.svelte";
-import PushDialogSvelte from "./interop/PushDialog.svelte";
+import PushDialogSvelte from "./dev/PushDialog.svelte";
 import TypeProcPage from "./pages/TypeProcPage.svelte";
 import NewTypedResource from "./pages/NewTypedResource.svelte";
 import MySpace from "./pages/MySpace.svelte";

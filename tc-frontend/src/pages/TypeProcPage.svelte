@@ -8,12 +8,12 @@
         Spinner,
         Button,
     } from "@sveltestrap/sveltestrap";
-    import ResourceItem from "../lib/ResourceItem.svelte";
-    import type { ItemMeta } from "../schema";
+    import ResourceItem from "../components/ResourceItem.svelte";
+    import type { ItemMeta } from "../types";
     import { getContext } from "svelte";
-    import { fetch_tags_info, construct_tags_by_ids } from "./FetchMetaHubTags";
+    import { fetchTagsInfo, constructTagsById } from "../lib/api/metahub";
     import { searchParams } from "sv-router";
-    import { registry } from "../lib/processor";
+    import { registry } from "../modules/registry";
     import { authFetch, getAuthContext } from "../lib/auth";
 
     let router: any = getContext("router");
@@ -63,14 +63,14 @@
                 ...new Set(data.items.flatMap((item: any) => item.tag_ids)),
             ] as number[];
 
-            const tags_cache = await fetch_tags_info(metahub_host, uniqueTagIds);
+            const tags_cache = await fetchTagsInfo(metahub_host, uniqueTagIds);
 
             items = data.items.map((e: any) => ({
                 id: e.id,
                 title: e.title,
                 description: e.description,
                 update_time: new Date(e.updated_at),
-                tags: construct_tags_by_ids(e.tag_ids, tags_cache),
+                tags: constructTagsById(e.tag_ids, tags_cache),
                 data_type: e.data_type,
                 creator_name: e.creator_name,
                 creator_sub: e.creator_sub,

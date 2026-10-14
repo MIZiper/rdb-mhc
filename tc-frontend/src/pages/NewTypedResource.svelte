@@ -1,9 +1,9 @@
 <script lang="ts">
     import { Col, Container, Row } from "@sveltestrap/sveltestrap";
     import { getContext } from "svelte";
-    import { BaseProcessor, registry } from "../lib/processor";
-    import NewResource from "../lib/NewResource.svelte";
-    import type { ItemMeta } from "../schema";
+    import { BaseProcessor, registry } from "../modules/registry";
+    import NewResource from "../components/NewResource.svelte";
+    import type { ItemMeta } from "../types";
     import { authFetch, isAuthenticated } from "../lib/auth";
 
     const router: any = getContext("router");
