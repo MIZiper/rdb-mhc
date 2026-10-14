@@ -18,21 +18,15 @@ from tc.auth.permissions import (
     can_see_node,
     ROLE_CREATE,
 )
-from tc.services.file_link import extract_file_ids
+from tc.services.node_content import (
+    link_file_refs,
+    persist_content,
+    reindex_node_fields,
+)
 
 router = APIRouter(prefix="/nodes")
 
 _node_data_adapter = TypeAdapter(NodeData)
-
-
-async def _link_file_refs(conn: Connection, node_id, content) -> None:
-    """Associate uploaded files referenced by ``file_id`` fields to a node."""
-    ids = extract_file_ids(content)
-    if not ids:
-        return
-    await conn.execute(
-        "UPDATE files SET node_id=$1 WHERE id = ANY($2::uuid[])", node_id, ids
-    )
 
 
 def _visibility_clause(
@@ -139,7 +133,8 @@ async def add_node_with_content(
             "INSERT INTO node_tags (node_id, tag_id) VALUES ($1, $2)", row["id"], tag_id
         )
 
-    await _link_file_refs(conn, row["id"], node.content)
+    await link_file_refs(conn, row["id"], node.content)
+    await reindex_node_fields(conn, row["id"], node.content, node.data_type)
 
     return NodeMetaRead(
         id=row["id"],
@@ -243,15 +238,9 @@ async def patch_node_data(
         )
 
     content_dict = validated_data.model_dump()
-    updated_row = await conn.fetchrow(
-        """UPDATE nodes SET content=$1, updated_at=NOW()
-           WHERE id=$2
-           RETURNING updated_at, title, description, creator_name, creator_sub, status,
-                     visibility""",
-        content_dict,
-        node_id,
+    updated_row = await persist_content(
+        conn, node_id, content_dict, row["content_type"]
     )
-    await _link_file_refs(conn, node_id, content_dict)
     tags_rows = await conn.fetch("SELECT tag_id FROM node_tags WHERE node_id=$1", node_id)
     tag_ids = [r["tag_id"] for r in tags_rows]
 
@@ -287,16 +276,8 @@ async def ingest_node_data(
     check_edit_node(user, existing.get("creator_sub"))
 
     content_dict = payload.content.model_dump()
-    row = await conn.fetchrow(
-        """UPDATE nodes SET content=$1, content_type=$2, updated_at=NOW()
-           WHERE id=$3
-           RETURNING updated_at, title, description, creator_name, creator_sub, status,
-                     visibility""",
-        content_dict,
-        payload.content.type,
-        node_id,
-    )
-    await _link_file_refs(conn, node_id, content_dict)
+    content_type = getattr(payload.content, "type", None)
+    row = await persist_content(conn, node_id, content_dict, content_type)
     tags_rows = await conn.fetch("SELECT tag_id FROM node_tags WHERE node_id=$1", node_id)
     tag_ids = [r["tag_id"] for r in tags_rows]
 
@@ -305,7 +286,7 @@ async def ingest_node_data(
         title=row["title"],
         description=row["description"],
         content=payload.content,
-        data_type=payload.content.type,
+        data_type=content_type,
         updated_at=row["updated_at"],
         tag_ids=tag_ids,
         creator_name=row["creator_name"],

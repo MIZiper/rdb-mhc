@@ -7,6 +7,8 @@ import PushDialogSvelte from "./interop/PushDialog.svelte";
 import TypeProcPage from "./pages/TypeProcPage.svelte";
 import NewTypedResource from "./pages/NewTypedResource.svelte";
 import MySpace from "./pages/MySpace.svelte";
+import QueryPage from "./pages/QueryPage.svelte";
+import AggregatePage from "./pages/AggregatePage.svelte";
 
 
 export const router = createRouter({
@@ -15,6 +17,8 @@ export const router = createRouter({
     '/dev-test': PushDialogSvelte,
     '/mine': MySpace,
     '/new': NewTypedResource,
+    '/query': QueryPage,
+    '/aggregate': AggregatePage,
     '/tags/:tag_id/:tag_str': TagSearchPage,
     "/types/:type_name": TypeProcPage,
 })

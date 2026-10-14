@@ -10,6 +10,23 @@ export type { ItemMeta } from "./schema";
 export { getConfig } from "./utils/GetRuntimeEnv";
 export { fetch_tags_info } from "./pages/FetchMetaHubTags";
 
+export {
+    fetchTypes,
+    fetchFieldKeys,
+    queryNodes,
+    aggregateNodes,
+    batchNodeData,
+} from "./lib/api";
+export type {
+    TypeDescriptor,
+    FieldSpec,
+    FieldKey,
+    QueryFilter,
+    NodeQuery,
+    AggregateRequest,
+    AggregateGroup,
+} from "./lib/api";
+
 export { registry, BaseProcessor, type ViewerProps, type EditorExports } from "./lib/processor";
 
 export { default as NewResource } from "./lib/NewResource.svelte";

@@ -82,6 +82,12 @@
       <NavItem>
         <NavLink style="color: white;" href="/new">New</NavLink>
       </NavItem>
+      <NavItem>
+        <NavLink style="color: white;" href="/query">Query</NavLink>
+      </NavItem>
+      <NavItem>
+        <NavLink style="color: white;" href="/aggregate">Aggregate</NavLink>
+      </NavItem>
       {#if auth.authenticated}
         <NavItem>
           <NavLink style="color: white;" href="/mine">My Workspace</NavLink>

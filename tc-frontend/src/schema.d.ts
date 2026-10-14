@@ -11,6 +11,7 @@ export interface ItemMeta {
     creator_sub: string | null
     status: string
     visibility: string
+    fields?: Record<string, any>
 }
 
 export interface ItemDetail extends ItemMeta{

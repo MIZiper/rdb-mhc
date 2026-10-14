@@ -94,14 +94,22 @@
     async function loadContentForIds(ids: string[]) {
         analyzing = true;
         try {
-            const results: { title: string; content: any }[] = [];
-            for (const id of ids) {
-                const res = await authFetch(`/api/nodes/${id}/data`);
-                if (!res.ok) continue;
-                const d = await res.json();
-                results.push({ title: d.title, content: d.content });
+            if (ids.length === 0) {
+                analyzedItems = [];
+                return;
             }
-            analyzedItems = results;
+            const res = await authFetch(
+                `/api/nodes/data?ids=${encodeURIComponent(ids.join(","))}`,
+            );
+            if (!res.ok) {
+                analyzedItems = [];
+                return;
+            }
+            const d = await res.json();
+            analyzedItems = d.items.map((it: any) => ({
+                title: it.title,
+                content: it.content,
+            }));
         } finally {
             analyzing = false;
         }

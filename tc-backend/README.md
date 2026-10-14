@@ -22,6 +22,32 @@ bytes.
 
 ---
 
+## Cross-type retrieval & aggregation
+
+Content stays in `nodes.content` (JSONB) untouched, but every write also
+projects declared fields into the `node_fields` index (see
+`tc/db/03-index-schema.sql`), which the app applies on startup. Declared
+fields are described per type in `tc/types/registry.py` and mapped onto
+canonical, shareable keys so values from different types can be compared.
+
+- `GET /api/types` — registered type descriptors (fields, preview, ui).
+- `GET /api/nodes/fields` — the shared field-key vocabulary.
+- `GET /api/nodes/fields/{key}/values` — facets for a keyword key, or
+  min/max/count for a numeric key.
+- `POST /api/nodes/query` — cross-type search/filter over text, tags,
+  types and field conditions.
+- `POST /api/nodes/aggregate` — group numeric metrics by field keys and/or
+  tags.
+- `GET /api/nodes/data?ids=a,b,c` — batch content fetch.
+- `POST /api/admin/reindex` — rebuild projections (and upcast content)
+  for all nodes; requires `nodes:edit_any`.
+
+Adding a type is code-only: define a `TypeDescriptor` in
+`tc/types/registry.py` and (optionally) register a frontend renderer via
+`ui.component`.
+
+---
+
 ## Role-based access control
 
 All authorization is driven by Keycloak roles. The backend reads roles from both **Realm roles** and **Client roles** under `resource_access.{KC_CLIENT_ID}`, merging them into a single set.

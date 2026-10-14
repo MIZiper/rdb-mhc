@@ -5,6 +5,7 @@ from asyncpg.connection import Connection
 from tc.db.connection import get_db
 from tc.auth.keycloak import get_current_user
 from tc.auth.permissions import check_edit_node
+from tc.services.node_content import persist_content
 
 router = APIRouter(prefix="/nodes")
 
@@ -38,12 +39,7 @@ async def push_to_node(
         )
 
     if mode == "w":
-        await conn.execute(
-            "UPDATE nodes SET content=$1, content_type=$2, updated_at=NOW() WHERE id=$3",
-            data,
-            data.get("type"),
-            node_id,
-        )
+        merged = data
     elif mode == "a":
         existing = node["content"] or {}
         if isinstance(existing, dict) and isinstance(data, dict):
@@ -52,14 +48,11 @@ async def push_to_node(
             merged = existing + data
         else:
             merged = data
-        await conn.execute(
-            "UPDATE nodes SET content=$1, content_type=$2, updated_at=NOW() WHERE id=$3",
-            merged,
-            data.get("type"),
-            node_id,
-        )
     else:
         raise HTTPException(status_code=400, detail="Unknown push mode. Use 'w' or 'a'.")
+
+    content_type = merged.get("type") if isinstance(merged, dict) else None
+    await persist_content(conn, node_id, merged, content_type)
 
     return {"status": "ok", "node_id": str(node_id)}
 
