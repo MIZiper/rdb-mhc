@@ -66,17 +66,24 @@ def add_visibility(
     user: Optional[dict],
     add: Callable[[Any], int],
     table_alias: str = "n",
-    prefix: str = "WHERE",
+    prefix: str = "",
 ) -> Optional[str]:
+    """Return a bare visibility expression, optionally led by ``prefix``.
+
+    ``prefix`` defaults to empty because the common caller (``build_conditions``)
+    joins conditions itself; pass ``"WHERE"``/``"AND"`` when the result is
+    embedded directly into a query.
+    """
+    lead = f"{prefix} " if prefix else ""
     if user is None:
-        return f"{prefix} {table_alias}.visibility = 'public'"
+        return f"{lead}{table_alias}.visibility = 'public'"
     roles = user.get("roles", [])
     if ROLE_READ_ALL in roles:
         return None
     role_idx = add(list(roles))
     sub_idx = add(user["sub"])
     return (
-        f"{prefix} ({table_alias}.visibility = 'public' "
+        f"{lead}({table_alias}.visibility = 'public' "
         f"OR ('nodes:visibility:' || {table_alias}.visibility) = ANY(${role_idx}::text[]) "
         f"OR {table_alias}.creator_sub = ${sub_idx})"
     )
@@ -145,7 +152,8 @@ async def build_conditions(
 ) -> list[str]:
     conditions: list[str] = []
 
-    visibility = add_visibility(user, add)
+    # No "WHERE"/"AND" prefix here: callers join these conditions themselves.
+    visibility = add_visibility(user, add, prefix="")
     if visibility:
         conditions.append(visibility)
     if types:
@@ -193,11 +201,12 @@ async def reindex_node_fields(
 
     await conn.executemany(
         """INSERT INTO node_fields
-               (node_id, key, kind, unit, num_value, text_value, ts_value, search_tsv)
-           VALUES ($1, $2, $3, $4, $5, $6, $7,
-                   CASE WHEN $8::text IS NULL OR $8::text = ''
+               (node_id, key, kind, unit, num_value, text_value, ts_value,
+                idx_path, search_tsv)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8::integer[],
+                   CASE WHEN $9::text IS NULL OR $9::text = ''
                         THEN NULL
-                        ELSE to_tsvector('english', $8::text) END)""",
+                        ELSE to_tsvector('english', $9::text) END)""",
         [
             (
                 node_id,
@@ -207,6 +216,7 @@ async def reindex_node_fields(
                 row["num_value"],
                 row["text_value"],
                 row["ts_value"],
+                row.get("idx_path"),
                 row["text_value"] if row["kind"] == "text" else None,
             )
             for row in field_rows

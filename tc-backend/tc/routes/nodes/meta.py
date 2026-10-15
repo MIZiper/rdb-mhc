@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import Optional
 from uuid import UUID
 
+import asyncpg
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from asyncpg.connection import Connection
 
@@ -104,8 +105,11 @@ async def list_nodes(
         count_sql = f"SELECT COUNT(*) FROM nodes n {v_clause}"
         count_args = v_args
 
-    total = await conn.fetchval(count_sql, *count_args)
-    rows = await conn.fetch(sql, *params)
+    try:
+        total = await conn.fetchval(count_sql, *count_args)
+        rows = await conn.fetch(sql, *params)
+    except asyncpg.exceptions.PostgresSyntaxError:
+        raise HTTPException(status_code=400, detail="Invalid search query syntax")
     node_ids = [row["id"] for row in rows]
     tags_map = await load_tags_map(conn, node_ids)
 

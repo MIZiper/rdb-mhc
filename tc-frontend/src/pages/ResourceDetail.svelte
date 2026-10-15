@@ -29,6 +29,7 @@
     let item: ItemDetail | null = $state(null);
     let metahub_host = (getContext("mh_host") as string) || "";
     let processor: BaseProcessor | null = $state(null);
+    let loadError = $state("");
 
     let editMode = $state(false);
     let editTitle = $state("");
@@ -54,6 +55,10 @@
 
     onMount(async () => {
         const res = await authFetch(`/api/nodes/${item_id}/data`);
+        if (!res.ok) {
+            loadError = res.status === 404 ? "Resource not found" : "Failed to load resource";
+            return;
+        }
         const data = await res.json();
 
         const tags_cache = await fetchTagsInfo(metahub_host, data.tag_ids);
@@ -215,6 +220,8 @@
                     {/if}
                     <processor.viewer content_in={item.content} />
                 {/if}
+            {:else if loadError}
+                <p class="text-danger">{loadError}</p>
             {:else}
                 <p>Loading...</p>
             {/if}

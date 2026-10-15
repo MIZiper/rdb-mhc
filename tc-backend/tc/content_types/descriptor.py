@@ -80,17 +80,20 @@ class TypeDescriptor:
         }
 
 
-def _iter_path(content: Any, path: str) -> Iterator[Any]:
-    """Yield every value reachable at ``path``.
+def _iter_path(content: Any, path: str) -> Iterator[tuple[Any, tuple[int, ...]]]:
+    """Yield every ``(value, idx_path)`` reachable at ``path``.
 
     Path tokens are dot separated. A token suffixed with ``[]`` descends
     into a list, yielding once per element, e.g. ``channels[].data[].value``.
+    ``idx_path`` records the position visited at each list level, so values
+    that belong to the same list element can be correlated later (used by
+    cross-type aggregation).
     """
     parts = path.split(".")
 
-    def rec(node: Any, i: int) -> Iterator[Any]:
+    def rec(node: Any, i: int, idx_path: tuple[int, ...]) -> Iterator[tuple[Any, tuple[int, ...]]]:
         if i == len(parts):
-            yield node
+            yield node, idx_path
             return
         token = parts[i]
         list_step = token.endswith("[]")
@@ -100,12 +103,12 @@ def _iter_path(content: Any, path: str) -> Iterator[Any]:
         value = node[key]
         if list_step:
             if isinstance(value, list):
-                for item in value:
-                    yield from rec(item, i + 1)
+                for position, item in enumerate(value):
+                    yield from rec(item, i + 1, idx_path + (position,))
         else:
-            yield from rec(value, i + 1)
+            yield from rec(value, i + 1, idx_path)
 
-    yield from rec(content, 0)
+    yield from rec(content, 0, ())
 
 
 def _coerce(kind: str, value: Any) -> Any:
@@ -144,7 +147,13 @@ def _coerce(kind: str, value: Any) -> Any:
     return None
 
 
-def _row(key: str, kind: str, unit: str | None, value: Any) -> dict[str, Any]:
+def _row(
+    key: str,
+    kind: str,
+    unit: str | None,
+    value: Any,
+    idx_path: tuple[int, ...] | None = None,
+) -> dict[str, Any]:
     row: dict[str, Any] = {
         "key": key,
         "kind": kind,
@@ -152,6 +161,7 @@ def _row(key: str, kind: str, unit: str | None, value: Any) -> dict[str, Any]:
         "num_value": None,
         "text_value": None,
         "ts_value": None,
+        "idx_path": list(idx_path) if idx_path else None,
     }
     if kind == "number":
         row["num_value"] = value
@@ -188,11 +198,11 @@ def extract_field_rows(
     rows: list[dict[str, Any]] = []
     if descriptor is not None:
         for spec in descriptor.fields:
-            for raw in _iter_path(content, spec.path):
+            for raw, idx_path in _iter_path(content, spec.path):
                 value = _coerce(spec.kind, raw)
                 if value is None:
                     continue
-                rows.append(_row(spec.key, spec.kind, spec.unit, value))
+                rows.append(_row(spec.key, spec.kind, spec.unit, value, idx_path))
     for text in _iter_text_leaves(content):
         rows.append(_row("_content", "text", None, text))
     return rows

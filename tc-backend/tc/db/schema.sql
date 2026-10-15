@@ -124,8 +124,12 @@ CREATE TABLE IF NOT EXISTS node_fields (
     num_value   DOUBLE PRECISION,
     text_value  TEXT,
     ts_value    TIMESTAMPTZ,
+    idx_path    INTEGER[],
     search_tsv  TSVECTOR
 );
+
+-- Migration for databases created before correlation support.
+ALTER TABLE node_fields ADD COLUMN IF NOT EXISTS idx_path INTEGER[];
 
 CREATE INDEX IF NOT EXISTS idx_node_fields_node_id ON node_fields(node_id);
 CREATE INDEX IF NOT EXISTS idx_node_fields_key_num ON node_fields(key, num_value);

@@ -26,7 +26,6 @@ tc/
   db/
     connection.py   # asyncpg pool
     schema.sql      # single idempotent schema, applied on startup
-    seed.dev.sql    # optional development seed data
 ```
 
 ## Environment variables

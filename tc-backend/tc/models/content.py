@@ -35,7 +35,7 @@ class ContentPayload(BaseModel):
 class NodeContentRead(BaseModel):
     id: UUID
     title: str
-    description: str
+    description: Optional[str] = None
     updated_at: datetime
     content: Any
     data_type: Optional[str] = None

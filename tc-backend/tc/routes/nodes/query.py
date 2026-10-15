@@ -153,29 +153,39 @@ async def aggregate_nodes(
     if not node_ids:
         return {"groups": [], "total_nodes": 0}
 
-    metric_map: dict[UUID, list[float]] = {nid: [] for nid in node_ids}
+    # Numeric metric values, each tagged with the list position it came from
+    # so it can be correlated with the group dimensions of the same record.
+    metric_rows_by_node: dict[UUID, list[tuple[float, tuple[int, ...]]]] = {
+        nid: [] for nid in node_ids
+    }
     if body.metric:
         metric_rows = await conn.fetch(
-            """SELECT node_id, num_value FROM node_fields
+            """SELECT node_id, num_value, idx_path FROM node_fields
                WHERE node_id = ANY($1) AND key = $2 AND kind = 'number'""",
             node_ids,
             body.metric,
         )
         for m in metric_rows:
             if m["num_value"] is not None:
-                metric_map[m["node_id"]].append(float(m["num_value"]))
+                metric_rows_by_node[m["node_id"]].append(
+                    (float(m["num_value"]), tuple(m["idx_path"] or ()))
+                )
 
-    group_values: dict[UUID, dict[str, list]] = {nid: {} for nid in node_ids}
+    group_rows_by_node: dict[UUID, dict[str, list[tuple[Any, tuple[int, ...]]]]] = {
+        nid: {} for nid in node_ids
+    }
     if body.group_by:
         group_rows = await conn.fetch(
-            """SELECT node_id, key, kind, num_value, text_value, ts_value
+            """SELECT node_id, key, kind, num_value, text_value, ts_value, idx_path
                FROM node_fields
                WHERE node_id = ANY($1) AND key = ANY($2)""",
             node_ids,
             list(body.group_by),
         )
         for g in group_rows:
-            group_values[g["node_id"]].setdefault(g["key"], []).append(_field_value(g))
+            group_rows_by_node[g["node_id"]].setdefault(g["key"], []).append(
+                (_field_value(g), tuple(g["idx_path"] or ()))
+            )
 
     tag_values: dict[UUID, list[int]] = {nid: [] for nid in node_ids}
     if body.group_by_tag:
@@ -187,28 +197,38 @@ async def aggregate_nodes(
 
     buckets: dict[tuple, dict] = {}
     for nid in node_ids:
-        dims: list[list] = []
-        for key in body.group_by:
-            dims.append(group_values[nid].get(key) or [None])
+        dims: list[list[tuple[Any, tuple[int, ...]]]] = [
+            group_rows_by_node[nid].get(key) or [(None, ())]
+            for key in body.group_by
+        ]
         if body.group_by_tag:
-            dims.append(tag_values[nid] or [None])
+            dims.append([(tag_id, ()) for tag_id in (tag_values[nid] or [None])])
 
         combos = product(*dims) if dims else [()]
-        metric_values = metric_map[nid]
+        metric_rows = metric_rows_by_node[nid]
         for combo in combos:
             group: dict[str, Any] = {}
+            # Index paths of the list-bound group values this bucket represents;
+            # a metric value belongs here only if it shares those positions.
+            constraints: list[tuple[int, ...]] = []
             i = 0
             for key in body.group_by:
-                group[key] = combo[i]
+                value, idx_path = combo[i]
+                group[key] = value
+                if idx_path:
+                    constraints.append(idx_path)
                 i += 1
             if body.group_by_tag:
-                group["tag_id"] = combo[i]
+                group["tag_id"] = combo[i][0]
+
             bucket_key = tuple(sorted(group.items(), key=lambda kv: kv[0]))
             bucket = buckets.setdefault(
                 bucket_key, {"group": group, "nodes": set(), "values": []}
             )
             bucket["nodes"].add(nid)
-            bucket["values"].extend(metric_values)
+            for number, metric_idx in metric_rows:
+                if all(metric_idx[: len(c)] == c for c in constraints):
+                    bucket["values"].append(number)
 
     groups = []
     for bucket in buckets.values():

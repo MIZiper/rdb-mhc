@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field, field_validator
 class NodeMetaRead(BaseModel):
     id: UUID
     title: str
-    description: str
+    description: Optional[str] = None
     updated_at: datetime
     tag_ids: list[int]
     data_type: Optional[str] = Field(None, description="Content type id")
