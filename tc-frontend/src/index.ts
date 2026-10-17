@@ -53,6 +53,10 @@ export {
 export { default as NewResource } from "./components/NewResource.svelte";
 export { default as ResourceItem } from "./components/ResourceItem.svelte";
 export { default as Pagination } from "./components/Pagination.svelte";
+export { default as Stack } from "./components/ui/Stack.svelte";
+export { default as Legend } from "./components/ui/Legend.svelte";
+export { default as ImageTile } from "./components/ui/ImageTile.svelte";
+export { default as TagChip } from "./components/ui/TagChip.svelte";
 export { default as ResourceDetail } from "./pages/ResourceDetail.svelte";
 export { default as MainPage } from "./pages/MainPage.svelte";
 export { default as TagSearchResult } from "./pages/TagSearchResult.svelte";

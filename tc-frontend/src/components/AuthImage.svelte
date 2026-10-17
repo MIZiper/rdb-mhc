@@ -86,16 +86,16 @@
         justify-content: center;
         min-width: 60px;
         min-height: 60px;
-        background: #f2f4f4;
-        color: #aaa;
+        background: var(--bs-secondary-bg);
+        color: var(--bs-secondary-color);
         font-size: 0.78em;
-        border-radius: 4px;
+        border-radius: var(--bs-border-radius);
     }
     .spinner {
         width: 18px;
         height: 18px;
-        border: 2px solid #ddd;
-        border-top-color: #49a9a7;
+        border: 2px solid var(--bs-border-color);
+        border-top-color: var(--bs-primary);
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
     }

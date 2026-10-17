@@ -1,5 +1,12 @@
 <script lang="ts">
-    import { Col, Row } from "@sveltestrap/sveltestrap";
+    import {
+        Button,
+        Card,
+        CardBody,
+        CardHeader,
+        Col,
+        Row,
+    } from "@sveltestrap/sveltestrap";
     import type { TypeViewerProps } from "../registry";
     import {
         imageFullUrl,
@@ -7,8 +14,8 @@
         parseImageGallery,
         type ImageEntry,
     } from "../../lib/utils/image";
-    import AuthImage from "../../components/AuthImage.svelte";
     import ImageLightbox from "../../components/ImageLightbox.svelte";
+    import ImageTile from "../../components/ui/ImageTile.svelte";
 
     interface ItemGallery {
         key: string;
@@ -73,26 +80,33 @@
 {#if galleries.length === 0}
     <p class="text-muted">No valid Image data in selected items.</p>
 {:else}
-    <Row>
+    <Row class="g-3">
         <Col xs="3">
-            <div class="sidebar">
-                <h6>Select resources</h6>
-                <div class="toggle-row">
-                    <button class="mini" onclick={() => (selected = new Set(galleries.map((g) => g.key)))}>Select all</button>
-                    <button class="mini" onclick={() => (selected = new Set())}>Clear</button>
-                </div>
-                <div class="checkbox-list">
-                    {#each galleries as g (g.key)}
-                        <label class="check-item">
-                            <input type="checkbox" checked={selected.has(g.key)} onchange={() => toggle(g.key)} />
-                            <span>
-                                <span class="item-title">{g.title}</span>
-                                <span class="count">{g.images.length} images</span>
-                            </span>
-                        </label>
-                    {/each}
-                </div>
-            </div>
+            <Card>
+                <CardHeader class="py-2 fw-semibold">Select resources</CardHeader>
+                <CardBody class="pt-2">
+                    <div class="d-flex gap-2 mb-2">
+                        <Button size="sm" color="outline-secondary" onclick={() => (selected = new Set(galleries.map((g) => g.key)))}>Select all</Button>
+                        <Button size="sm" color="outline-secondary" onclick={() => (selected = new Set())}>Clear</Button>
+                    </div>
+                    <div class="checkbox-list">
+                        {#each galleries as g (g.key)}
+                            <label class="form-check mb-1">
+                                <input
+                                    class="form-check-input mt-1"
+                                    type="checkbox"
+                                    checked={selected.has(g.key)}
+                                    onchange={() => toggle(g.key)}
+                                />
+                                <span class="form-check-label">
+                                    <span class="d-block fw-medium">{g.title}</span>
+                                    <span class="d-block small text-secondary">{g.images.length} images</span>
+                                </span>
+                            </label>
+                        {/each}
+                    </div>
+                </CardBody>
+            </Card>
         </Col>
         <Col xs="9">
             <div class="main-area">
@@ -100,22 +114,18 @@
                     <p class="text-muted">Select image resources to display.</p>
                 {:else}
                     {#each sections as section (section.key)}
-                        <div class="section">
-                            <h6 class="section-title">{section.title}</h6>
-                            <div class="gallery">
+                        <div class="mb-3">
+                            <h6 class="border-start border-3 ps-2 mb-2">{section.title}</h6>
+                            <div class="row g-3">
                                 {#each section.images as img, i (`${section.key}-${img.file_id}-${i}`)}
-                                    <button
-                                        type="button"
-                                        class="tile"
-                                        onclick={() => (lightboxIndex = section.start + i)}
-                                    >
-                                        <span class="thumb">
-                                            <AuthImage src={imageThumbUrl(img.file_id)} alt={img.caption || ""} />
-                                        </span>
-                                        {#if img.caption}
-                                            <span class="caption">{img.caption}</span>
-                                        {/if}
-                                    </button>
+                                    <div class="col-6 col-md-4">
+                                        <ImageTile
+                                            src={imageThumbUrl(img.file_id)}
+                                            alt={img.caption || ""}
+                                            caption={img.caption || ""}
+                                            onclick={() => (lightboxIndex = section.start + i)}
+                                        />
+                                    </div>
                                 {/each}
                             </div>
                         </div>
@@ -136,112 +146,11 @@
 {/if}
 
 <style>
-    .sidebar {
-        background: #f7f7f8;
-        border-radius: 6px;
-        padding: 12px;
-    }
-    .sidebar h6 {
-        margin-top: 0;
-        margin-bottom: 8px;
-        font-size: 0.85em;
-        color: #555;
-        border-bottom: 1px solid #ddd;
-        padding-bottom: 4px;
-    }
-    .toggle-row {
-        display: flex;
-        gap: 6px;
-        margin-bottom: 8px;
-    }
-    .mini {
-        border: 1px solid #ccc;
-        border-radius: 3px;
-        background: #fff;
-        cursor: pointer;
-        font-size: 0.78em;
-        padding: 1px 8px;
-    }
     .checkbox-list {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
         max-height: 60vh;
         overflow-y: auto;
     }
-    .check-item {
-        font-size: 0.85em;
-        cursor: pointer;
-        display: flex;
-        align-items: flex-start;
-        gap: 6px;
-    }
-    .check-item input {
-        margin-top: 2px;
-        flex-shrink: 0;
-    }
-    .item-title {
-        display: block;
-        font-weight: 500;
-    }
-    .count {
-        display: block;
-        color: #888;
-        font-size: 0.9em;
-    }
     .main-area {
         min-height: 200px;
-    }
-    .section {
-        margin-bottom: 20px;
-    }
-    .section-title {
-        font-size: 0.92em;
-        color: #333;
-        border-left: 3px solid #49a9a7;
-        padding-left: 8px;
-        margin: 0 0 10px 0;
-    }
-    .gallery {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
-        gap: 12px;
-    }
-    .tile {
-        display: block;
-        width: 100%;
-        padding: 0;
-        color: inherit;
-        font: inherit;
-        text-align: left;
-        border: 1px solid #e6e6e6;
-        border-radius: 6px;
-        overflow: hidden;
-        background: #fff;
-        cursor: zoom-in;
-        transition: box-shadow 0.15s;
-    }
-    .tile:hover {
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
-    }
-    .thumb {
-        display: flex;
-        aspect-ratio: 4 / 3;
-        align-items: center;
-        justify-content: center;
-        background: #f2f4f4;
-        overflow: hidden;
-    }
-    .thumb :global(img) {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-    .caption {
-        display: block;
-        padding: 5px 8px;
-        font-size: 0.82em;
-        color: #555;
-        border-top: 1px solid #f0f0f0;
     }
 </style>

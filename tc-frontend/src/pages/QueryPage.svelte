@@ -1,6 +1,9 @@
 <script lang="ts">
     import {
         Button,
+        Card,
+        CardBody,
+        CardHeader,
         Col,
         Container,
         Input,
@@ -11,6 +14,7 @@
     import { getContext, onMount } from "svelte";
     import { TagsSelector, type TagMeta } from "@mizip/metahub";
     import ResourceItem from "../components/ResourceItem.svelte";
+    import Pagination from "../components/Pagination.svelte";
     import type { ItemMeta } from "../types";
     import { fetchTagsInfo, constructTagsById } from "../lib/api/metahub";
     import { fetchFieldKeys, fetchTypes, queryNodes } from "../lib/api";
@@ -132,9 +136,9 @@
 </script>
 
 <Container class="my-2" fluid>
-    <h4>Cross-type Query</h4>
+    <h4 class="mb-3">Cross-type Query</h4>
 
-    <Row class="g-2 mb-2">
+    <Row class="g-2 mb-3">
         <Col md="6">
             <Input
                 type="search"
@@ -144,92 +148,111 @@
             />
         </Col>
         <Col md="3">
-            <select class="form-select" bind:value={status}>
+            <Input type="select" bind:value={status}>
                 <option value="">Any status</option>
                 <option value="draft">Draft</option>
                 <option value="pending_review">In Review</option>
                 <option value="published">Published</option>
                 <option value="archived">Archived</option>
-            </select>
+            </Input>
         </Col>
         <Col md="3">
             <Button color="primary" onclick={() => run()}>Search</Button>
         </Col>
     </Row>
 
-    <Row class="g-3 mb-2">
+    <Row class="g-3 mb-3">
         <Col md="4">
-            <div class="panel">
-                <div class="panel-title">Types</div>
-                {#each types as t}
-                    <label class="check">
+            <Card class="h-100">
+                <CardHeader class="py-2 fw-semibold">Types</CardHeader>
+                <CardBody class="pt-2">
+                    {#each types as t}
+                        <label class="form-check mb-1">
+                            <input
+                                class="form-check-input"
+                                type="checkbox"
+                                checked={selectedTypes[t.type] ?? false}
+                                onchange={() => toggleType(t.type)}
+                            />
+                            <span class="form-check-label">
+                                {t.display_name} <code>{t.type}</code>
+                            </span>
+                        </label>
+                    {/each}
+                    {#if types.length === 0}
+                        <span class="small text-muted">No types registered.</span>
+                    {/if}
+                </CardBody>
+            </Card>
+        </Col>
+        <Col md="4">
+            <Card class="h-100">
+                <CardHeader class="py-2 fw-semibold">Tags</CardHeader>
+                <CardBody class="pt-2">
+                    <Button size="sm" onclick={() => (tagSelectorOpen = true)}>
+                        Edit Tags
+                    </Button>
+                    <label class="form-check mt-2">
                         <input
+                            class="form-check-input"
                             type="checkbox"
-                            checked={selectedTypes[t.type] ?? false}
-                            onchange={() => toggleType(t.type)}
+                            bind:checked={includeSubTags}
                         />
-                        {t.display_name} <code>{t.type}</code>
+                        <span class="form-check-label">Include sub-tags</span>
                     </label>
-                {/each}
-                {#if types.length === 0}
-                    <span class="muted">No types registered.</span>
-                {/if}
-            </div>
+                    <div class="small text-muted">
+                        {selectedTags.map((t) => t.name).join(", ") || "none"}
+                    </div>
+                </CardBody>
+            </Card>
         </Col>
         <Col md="4">
-            <div class="panel">
-                <div class="panel-title">Tags</div>
-                <Button size="sm" onclick={() => (tagSelectorOpen = true)}>
-                    Edit Tags
-                </Button>
-                <label class="check mt-2">
-                    <input type="checkbox" bind:checked={includeSubTags} />
-                    Include sub-tags
-                </label>
-                <div class="muted">
-                    {selectedTags.map((t) => t.name).join(", ") || "none"}
-                </div>
-            </div>
-        </Col>
-        <Col md="4">
-            <div class="panel">
-                <div class="panel-title">
+            <Card class="h-100">
+                <CardHeader class="py-2 fw-semibold d-flex justify-content-between align-items-center">
                     Field filters
                     <Button size="sm" color="secondary" onclick={addFilter}>+</Button>
-                </div>
-                {#each filters as f, i}
-                    <div class="filter-row">
-                        <select
-                            bind:value={f.key}
-                            onchange={() => {
-                                const kind = fieldKeys.find(
-                                    (k) => k.key === f.key,
-                                )?.kind;
-                                f.op = opOptions(kind)[0];
-                            }}
-                        >
-                            <option value="">field…</option>
-                            {#each fieldKeys as fk}
-                                <option value={fk.key}>
-                                    {fk.label || fk.key} ({fk.kind})
-                                </option>
-                            {/each}
-                        </select>
-                        <select bind:value={f.op}>
-                            {#each opOptions(fieldKeys.find((k) => k.key === f.key)?.kind) as op}
-                                <option value={op}>{op}</option>
-                            {/each}
-                        </select>
-                        <input
-                            class="form-control"
-                            bind:value={f.value}
-                            placeholder="value"
-                            onkeypress={(e) => e.key === "Enter" && run()}
-                        />
-                        <button class="x" onclick={() => removeFilter(i)}>×</button>
-                    </div>
-                {/each}
-            </div>
+                </CardHeader>
+                <CardBody class="pt-2">
+                    {#each filters as f, i}
+                        <div class="filter-row">
+                            <select
+                                class="form-select form-select-sm"
+                                bind:value={f.key}
+                                onchange={() => {
+                                    const kind = fieldKeys.find(
+                                        (k) => k.key === f.key,
+                                    )?.kind;
+                                    f.op = opOptions(kind)[0];
+                                }}
+                            >
+                                <option value="">field…</option>
+                                {#each fieldKeys as fk}
+                                    <option value={fk.key}>
+                                        {fk.label || fk.key} ({fk.kind})
+                                    </option>
+                                {/each}
+                            </select>
+                            <select class="form-select form-select-sm" bind:value={f.op}>
+                                {#each opOptions(fieldKeys.find((k) => k.key === f.key)?.kind) as op}
+                                    <option value={op}>{op}</option>
+                                {/each}
+                            </select>
+                            <input
+                                class="form-control form-control-sm flex-grow-1"
+                                bind:value={f.value}
+                                placeholder="value"
+                                onkeypress={(e) => e.key === "Enter" && run()}
+                            />
+                            <Button
+                                size="sm"
+                                color="link"
+                                class="text-danger px-1"
+                                onclick={() => removeFilter(i)}
+                            >×</Button>
+                        </div>
+                    {/each}
+                </CardBody>
+            </Card>
         </Col>
     </Row>
 
@@ -238,19 +261,13 @@
     {:else if error}
         <p class="text-danger">Error: {error}</p>
     {:else if hasSearched}
-        <p class="meta">{total} result(s) — page {page} / {totalPages}</p>
-        <ListGroup class="mt-2">
+        <p class="text-muted small">{total} result(s) — page {page} / {totalPages}</p>
+        <ListGroup class="mt-2 d-flex flex-column gap-2">
             {#each items as item}
                 <ResourceItem {item} />
             {/each}
         </ListGroup>
-        {#if totalPages > 1}
-            <div class="pager">
-                <Button size="sm" disabled={page <= 1} onclick={() => goto(page - 1)}>Prev</Button>
-                <span>{page} / {totalPages}</span>
-                <Button size="sm" disabled={page >= totalPages} onclick={() => goto(page + 1)}>Next</Button>
-            </div>
-        {/if}
+        <Pagination page={page} totalPages={totalPages} onchange={goto} />
     {/if}
 </Container>
 
@@ -261,53 +278,12 @@
 />
 
 <style>
-    .panel {
-        border: 1px solid #e2e2e2;
-        border-radius: 6px;
-        padding: 10px;
-        height: 100%;
-        background: #fafafa;
-        font-size: 0.9em;
-    }
-    .panel-title {
-        font-weight: 600;
-        margin-bottom: 6px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .check {
-        display: block;
-        cursor: pointer;
-    }
-    .muted {
-        color: #888;
-        font-size: 0.85em;
-    }
     .filter-row {
         display: flex;
-        gap: 4px;
-        margin-bottom: 4px;
+        gap: 0.25rem;
+        margin-bottom: 0.25rem;
     }
-    .filter-row select,
-    .filter-row input {
-        font-size: 0.82em;
-        padding: 2px 4px;
+    .filter-row select {
         min-width: 0;
-    }
-    .filter-row input {
-        flex: 1;
-    }
-    .x {
-        border: none;
-        background: none;
-        color: #c00;
-        cursor: pointer;
-    }
-    .pager {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-top: 10px;
     }
 </style>

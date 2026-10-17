@@ -59,13 +59,13 @@
 
 <Container class="my-2" fluid>
     {#if loading}
-        <p>Loading</p>
+        <p class="text-muted">Loading...</p>
     {:else}
-        <p class="meta">
+        <p class="text-muted small">
             Top {totalItems} items displayed.
         </p>
 
-        <ListGroup class="mt-2">
+        <ListGroup class="mt-2 d-flex flex-column gap-2">
             {#each items as item}
                 <ResourceItem {item} />
             {/each}

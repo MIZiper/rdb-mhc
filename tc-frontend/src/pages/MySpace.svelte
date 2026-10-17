@@ -75,17 +75,17 @@
     </Nav>
 
     {#if list.loading}
-        <p>Loading...</p>
+        <p class="text-muted">Loading...</p>
     {:else if list.error}
         <p class="alert alert-danger">{list.error}</p>
     {:else if list.items.length === 0}
-        <p>No items found.</p>
+        <p class="text-muted">No items found.</p>
     {:else}
-        <p class="meta">
+        <p class="text-muted small">
             {list.total} results (Page {list.page} / {list.totalPages})
         </p>
 
-        <ListGroup class="mt-2">
+        <ListGroup class="mt-2 d-flex flex-column gap-2">
             {#each list.items as item}
                 <ResourceItem {item} />
             {/each}

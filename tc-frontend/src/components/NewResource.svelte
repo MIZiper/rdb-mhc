@@ -35,7 +35,13 @@
     let visibilityPreset: string = $state("public");
     let customVisibility: string = $state("");
 
-    let { onSubmit } = $props();
+    let {
+        onSubmit,
+        class: className = "",
+    }: {
+        onSubmit?: (item: ItemMeta) => void;
+        class?: string;
+    } = $props();
 
     function useTags(_tags: TagMeta[]) {
         if (item) {
@@ -83,7 +89,7 @@
     }
 </script>
 
-<Card>
+<Card class={className}>
     <CardHeader>
         <CardTitle>New Resource</CardTitle>
     </CardHeader>
@@ -94,12 +100,12 @@
         <Input type="textarea" bind:value={item.description} />
 
         <Label>Visibility</Label>
-        <select class="form-select" bind:value={visibilityPreset}>
+        <Input type="select" bind:value={visibilityPreset}>
             <option value="public">Public</option>
             <option value="internal">Internal</option>
             <option value="confidential">Confidential</option>
             <option value="__custom__">Custom...</option>
-        </select>
+        </Input>
         {#if visibilityPreset === "__custom__"}
             <Input
                 type="text"
@@ -118,7 +124,7 @@
                 tagSelectorOpen = true;
             }}>Edit Tags</Button
         >
-        <p>
+        <p class="small text-secondary mb-0">
             <i>Tags:</i>
             <span>{item.tags.map((e) => e.name).join(", ")}</span>
             <br />

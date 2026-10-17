@@ -6,8 +6,6 @@
         CardBody,
         CardFooter,
         CardHeader,
-        CardSubtitle,
-        CardTitle,
         Col,
         Container,
         Input,
@@ -22,6 +20,13 @@
     import { registry, type BaseProcessor } from "../modules/registry";
     import { authFetch, hasRole, getAuthContext } from "../lib/auth";
     import { deleteImage } from "../lib/api/files";
+    import {
+        statusColor,
+        statusLabel,
+        typeColor,
+        visibilityColor,
+    } from "../lib/utils/ui";
+    import TagChip from "../components/ui/TagChip.svelte";
 
     let router: any = getContext("router");
     let params = router.route.getParams("/items/:id");
@@ -192,10 +197,58 @@
     }
 </script>
 
-<Container class="my-2" fluid>
-    <Row>
-        <Col>
-            {#if item}
+<Container class="my-3" fluid>
+    {#if item}
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
+            <div class="flex-grow-1">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                    {#if item.data_type}
+                        <a
+                            class="badge rounded-pill text-white text-decoration-none"
+                            style="background:{typeColor(item.data_type)}"
+                            href="/types/{encodeURI(item.data_type)}"
+                        >{item.data_type}</a>
+                    {/if}
+                    <Badge class="text-bg-{statusColor(item.status)}">
+                        {statusLabel(item.status)}
+                    </Badge>
+                    {#if item.visibility !== "public"}
+                        <Badge class="text-bg-{visibilityColor(item.visibility)}">
+                            {item.visibility}
+                        </Badge>
+                    {/if}
+                </div>
+                <h2 class="h3 mb-1">{item.title}</h2>
+                {#if item.description}
+                    <p class="text-secondary mb-2">{item.description}</p>
+                {/if}
+                <div class="d-flex flex-wrap align-items-center gap-1">
+                    <span class="small text-secondary me-1">Tags</span>
+                    {#each item.tags as tag}
+                        <TagChip {tag} metahubHost={metahub_host} />
+                    {:else}
+                        <span class="small text-muted">No tags</span>
+                    {/each}
+                </div>
+            </div>
+            {#if checkCanEdit() && !editMode}
+                <Button color="outline-secondary" size="sm" onclick={enterEdit}>
+                    Edit details
+                </Button>
+            {/if}
+        </div>
+
+        <Row class="g-4">
+            <Col lg="8">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="mb-0">Content</h5>
+                    {#if checkCanEdit() && processor?.editor && !contentEditMode}
+                        <Button color="link" size="sm" class="px-0" onclick={enterContentEdit}>
+                            Edit Content
+                        </Button>
+                    {/if}
+                </div>
+
                 {#if !processor}
                     <p>Registered type: [{item.data_type}] (no viewer found)</p>
                     <pre>{JSON.stringify(item.content, null, 2)}</pre>
@@ -213,37 +266,27 @@
                         </div>
                     </div>
                 {:else}
-                    {#if checkCanEdit() && processor.editor}
-                        <div class="mb-2">
-                            <Button color="link" size="sm" onclick={enterContentEdit}>Edit Content</Button>
-                        </div>
-                    {/if}
                     <processor.viewer content_in={item.content} />
                 {/if}
-            {:else if loadError}
-                <p class="text-danger">{loadError}</p>
-            {:else}
-                <p>Loading...</p>
-            {/if}
-        </Col>
-        <Col xs="4">
-            {#if item}
-                <Card>
-                    <CardHeader></CardHeader>
-                    <CardBody>
-                        {#if editMode}
+            </Col>
+
+            <Col lg="4">
+                {#if editMode}
+                    <Card class="shadow-sm">
+                        <CardHeader class="fw-semibold">Edit details</CardHeader>
+                        <CardBody>
                             <Label>Title</Label>
                             <Input type="text" bind:value={editTitle} />
                             <Label class="mt-2">Description</Label>
                             <Input type="textarea" bind:value={editDescription} />
 
                             <Label class="mt-2">Visibility</Label>
-                            <select class="form-select" bind:value={editVisibilityPreset}>
+                            <Input type="select" bind:value={editVisibilityPreset}>
                                 <option value="public">Public</option>
                                 <option value="internal">Internal</option>
                                 <option value="confidential">Confidential</option>
                                 <option value="__custom__">Custom...</option>
-                            </select>
+                            </Input>
                             {#if editVisibilityPreset === "__custom__"}
                                 <Input
                                     type="text"
@@ -253,53 +296,57 @@
                                 />
                             {/if}
 
-                            <div class="mt-2">
-                                <i>Tags:</i>
-                                <span>{editTags.map((e) => e.name).join(", ")}</span>
-                                <Button size="sm" class="ms-2" onclick={() => { tagSelectorOpen = true; }}>
+                            <Label class="mt-3">Tags</Label>
+                            <div class="d-flex flex-wrap align-items-center gap-1">
+                                {#each editTags as tag}
+                                    <TagChip {tag} link={false} />
+                                {:else}
+                                    <span class="small text-muted">No tags</span>
+                                {/each}
+                                <Button
+                                    size="sm"
+                                    color="outline-secondary"
+                                    class="ms-1"
+                                    onclick={() => { tagSelectorOpen = true; }}
+                                >
                                     Edit Tags
                                 </Button>
                             </div>
-                        {:else}
-                            <CardSubtitle>{item.title}</CardSubtitle>
-                            {item.description}
-                            {#if item.visibility !== "public"}
-                                <Badge color="info" class="mt-2 d-block" style="width:fit-content">
-                                    {item.visibility}
-                                </Badge>
-                            {/if}
-                        {/if}
-                    </CardBody>
-                    <CardFooter>
-                        {#if editMode}
+                        </CardBody>
+                        <CardFooter>
                             {#if saveError}
-                                <div class="text-danger mb-2">{saveError}</div>
+                                <div class="text-danger small mb-2">{saveError}</div>
                             {/if}
                             <Button color="primary" disabled={saving} onclick={saveMeta}>
                                 {saving ? "Saving..." : "Save"}
                             </Button>
                             <Button color="secondary" class="ms-2" onclick={cancelEdit}>Cancel</Button>
-                        {:else}
-                            {#each item.tags as tag}
-                                <Badge
-                                    pill
-                                    class="me-1"
-                                    href="/tags/{tag.id}/{encodeURI(tag.name)}"
-                                >
-                                    {tag.name}
-                                </Badge>
-                            {/each}
-                            {#if checkCanEdit()}
-                                <Button color="link" size="sm" class="ms-2" onclick={enterEdit}>Edit</Button>
-                            {/if}
-                        {/if}
-                    </CardFooter>
-                </Card>
-            {:else}
-                <p>Loading</p>
-            {/if}
-        </Col>
-    </Row>
+                        </CardFooter>
+                    </Card>
+                {:else}
+                    <Card class="shadow-sm">
+                        <CardHeader class="fw-semibold">Details</CardHeader>
+                        <CardBody>
+                            <dl class="row small mb-0">
+                                <dt class="col-4 fw-normal text-secondary">Creator</dt>
+                                <dd class="col-8 mb-2 text-truncate">{item.creator_name || "—"}</dd>
+                                <dt class="col-4 fw-normal text-secondary">Updated</dt>
+                                <dd class="col-8 mb-2">{item.update_time.toLocaleDateString()}</dd>
+                                <dt class="col-4 fw-normal text-secondary">Type</dt>
+                                <dd class="col-8 mb-2">{item.data_type || "—"}</dd>
+                                <dt class="col-4 fw-normal text-secondary">Visibility</dt>
+                                <dd class="col-8 mb-0">{item.visibility}</dd>
+                            </dl>
+                        </CardBody>
+                    </Card>
+                {/if}
+            </Col>
+        </Row>
+    {:else if loadError}
+        <p class="text-danger">{loadError}</p>
+    {:else}
+        <p class="text-muted">Loading...</p>
+    {/if}
 </Container>
 
 <TagsSelector

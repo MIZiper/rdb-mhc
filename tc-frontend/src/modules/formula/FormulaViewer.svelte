@@ -1,5 +1,7 @@
 <script lang="ts">
+    import { Card, CardBody, Input, Table } from "@sveltestrap/sveltestrap";
     import type { ViewerProps } from "../registry";
+    import Stack from "../../components/ui/Stack.svelte";
     import {
         evaluateFormulaAt,
         parseFormulaContent,
@@ -48,18 +50,18 @@
 {#if formulas.length === 0}
     <p class="text-muted">No formula data</p>
 {:else}
-    <div class="viewer">
+    <Stack gap={3}>
         <FormulaPlot {series} height={380} />
 
-        <div class="eval-panel">
-            <label class="x-input">
+        <div class="d-flex flex-column gap-2">
+            <label class="d-flex align-items-center gap-2">
                 <span>independent variable x =</span>
-                <input type="number" step="any" bind:value={xInput} />
+                <Input type="number" step="any" class="w-auto" bind:value={xInput} />
             </label>
             {#if !Number.isFinite(xValue)}
-                <span class="warn">Enter a valid number</span>
+                <span class="text-warning small">Enter a valid number</span>
             {/if}
-            <table class="eval-table">
+            <Table bordered size="sm" class="small align-middle eval-table">
                 <thead>
                     <tr><th>Formula</th><th>y(x)</th></tr>
                 </thead>
@@ -67,9 +69,9 @@
                     {#each evaluations as row}
                         <tr>
                             <td>{row.name}</td>
-                            <td class="mono">
+                            <td class="font-monospace">
                                 {#if row.y === null}
-                                    <span class="null-cell">Out of domain / undefined</span>
+                                    <span class="text-secondary fst-italic">Out of domain / undefined</span>
                                 {:else}
                                     {fmt(row.y)}
                                 {/if}
@@ -77,121 +79,33 @@
                         </tr>
                     {/each}
                 </tbody>
-            </table>
+            </Table>
         </div>
 
-        <div class="formula-list">
+        <Stack gap={2}>
             {#each formulas as f}
-                <div class="formula-item">
-                    <div class="formula-head">
-                        <span class="fname">{f.name}</span>
-                        <span class="fdomain">x ∈ [{fmt(f.xmin)}, {fmt(f.xmax)}]</span>
-                    </div>
-                    <code class="fexpr">{f.expression}</code>
-                    {#if coeffText(f)}
-                        <div class="fcoeff">Coefficients: {coeffText(f)}</div>
-                    {/if}
-                    {#if f.note}
-                        <div class="fnote">{f.note}</div>
-                    {/if}
-                </div>
+                <Card>
+                    <CardBody>
+                        <div class="d-flex justify-content-between align-items-baseline gap-3">
+                            <span class="fw-semibold">{f.name}</span>
+                            <span class="small text-secondary">x ∈ [{fmt(f.xmin)}, {fmt(f.xmax)}]</span>
+                        </div>
+                        <code class="d-block font-monospace small text-success mt-1 text-break">{f.expression}</code>
+                        {#if coeffText(f)}
+                            <div class="small text-secondary mt-1">Coefficients: {coeffText(f)}</div>
+                        {/if}
+                        {#if f.note}
+                            <div class="small text-secondary mt-2 border-start border-3 ps-2">{f.note}</div>
+                        {/if}
+                    </CardBody>
+                </Card>
             {/each}
-        </div>
-    </div>
+        </Stack>
+    </Stack>
 {/if}
 
 <style>
-    .viewer {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-    }
-    .eval-panel {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-    .x-input {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 0.9em;
-    }
-    .x-input input {
-        width: 140px;
-        border: 1px solid #ccc;
-        border-radius: 3px;
-        padding: 4px 6px;
-    }
-    .warn {
-        color: #b06a00;
-        font-size: 0.82em;
-    }
-    .eval-table {
-        border-collapse: collapse;
-        width: 100%;
+    :global(.eval-table) {
         max-width: 480px;
-        font-size: 0.88em;
-    }
-    .eval-table th,
-    .eval-table td {
-        border: 1px solid #e0e0e0;
-        padding: 4px 8px;
-        text-align: left;
-    }
-    .eval-table th {
-        background: #f7f7f8;
-    }
-    .mono {
-        font-family: monospace;
-    }
-    .null-cell {
-        color: #bbb;
-        font-style: italic;
-    }
-    .formula-list {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-    .formula-item {
-        background: #fafafa;
-        border: 1px solid #e8e8e8;
-        border-radius: 6px;
-        padding: 10px 12px;
-    }
-    .formula-head {
-        display: flex;
-        justify-content: space-between;
-        align-items: baseline;
-        gap: 12px;
-    }
-    .fname {
-        font-weight: 600;
-        color: #333;
-    }
-    .fdomain {
-        font-size: 0.8em;
-        color: #888;
-    }
-    .fexpr {
-        display: block;
-        font-family: monospace;
-        font-size: 0.9em;
-        color: #1a6;
-        margin-top: 4px;
-        word-break: break-all;
-    }
-    .fcoeff {
-        font-size: 0.82em;
-        color: #666;
-        margin-top: 4px;
-    }
-    .fnote {
-        font-size: 0.85em;
-        color: #555;
-        margin-top: 6px;
-        border-left: 3px solid #49a9a7;
-        padding-left: 8px;
     }
 </style>

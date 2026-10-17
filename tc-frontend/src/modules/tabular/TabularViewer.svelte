@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { Table } from "@sveltestrap/sveltestrap";
     import type { ViewerProps } from "../registry";
 
     interface DataRow {
@@ -101,85 +102,49 @@
 {#if channels.length === 0}
     <p class="text-muted">No table data</p>
 {:else}
-    <div class="table-wrap">
-        <table>
-            <thead>
+    <Table bordered hover size="sm" responsive class="small align-middle">
+        <thead>
+            <tr>
+                <th class="sortable" onclick={() => setSort(-1)}>
+                    id_idx{sortIcon(-1)}
+                </th>
+                <th class="sortable" onclick={() => setSort(-2)}>
+                    time{sortIcon(-2)}
+                </th>
+                {#each channels as ch, ci}
+                    <th class="sortable" onclick={() => setSort(ci)}>
+                        <span>{ch.name}</span>
+                        {#if ch.id_name}
+                            <span class="small text-secondary">({ch.id_name})</span>
+                        {/if}
+                        {sortIcon(ci)}
+                    </th>
+                {/each}
+            </tr>
+        </thead>
+        <tbody>
+            {#each visibleRows as row}
                 <tr>
-                    <th class="sortable" onclick={() => setSort(-1)}>
-                        id_idx{sortIcon(-1)}
-                    </th>
-                    <th class="sortable" onclick={() => setSort(-2)}>
-                        time{sortIcon(-2)}
-                    </th>
-                    {#each channels as ch, ci}
-                        <th class="sortable" onclick={() => setSort(ci)}>
-                            <span>{ch.name}</span>
-                            {#if ch.id_name}
-                                <span class="ch-id">({ch.id_name})</span>
+                    <td class="small text-secondary">{row.id_idx}</td>
+                    <td class="font-monospace">{fmt(row.time)}</td>
+                    {#each row.values as val, _ci}
+                        <td class="font-monospace">
+                            {#if val !== null}
+                                {fmt(val)}
+                            {:else}
+                                <span class="text-secondary fst-italic">—</span>
                             {/if}
-                            {sortIcon(ci)}
-                        </th>
+                        </td>
                     {/each}
                 </tr>
-            </thead>
-            <tbody>
-                {#each visibleRows as row}
-                    <tr>
-                        <td class="row-id">{row.id_idx}</td>
-                        <td class="mono">{fmt(row.time)}</td>
-                        {#each row.values as val, _ci}
-                            <td class="mono">
-                                {#if val !== null}
-                                    {fmt(val)}
-                                {:else}
-                                    <span class="null-cell">—</span>
-                                {/if}
-                            </td>
-                        {/each}
-                    </tr>
-                {/each}
-            </tbody>
-        </table>
-    </div>
+            {/each}
+        </tbody>
+    </Table>
 {/if}
 
 <style>
-    .table-wrap {
-        overflow-x: auto;
-    }
-    table {
-        border-collapse: collapse;
-        width: 100%;
-    }
-    th, td {
-        padding: 4px 8px;
-        border: 1px solid #e0e0e0;
-        white-space: nowrap;
-        text-align: left;
-    }
-    th {
-        background: #f7f7f8;
-        font-size: 0.85em;
+    .sortable {
         cursor: pointer;
         user-select: none;
-    }
-    th:hover {
-        background: #e8e8ea;
-    }
-    .ch-id {
-        font-size: 0.8em;
-        opacity: 0.6;
-    }
-    .row-id {
-        font-size: 0.85em;
-        color: #555;
-    }
-    .mono {
-        font-family: monospace;
-        font-size: 0.9em;
-    }
-    .null-cell {
-        color: #ccc;
-        font-style: italic;
     }
 </style>

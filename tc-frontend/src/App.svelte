@@ -1,5 +1,9 @@
 <script lang="ts">
   import {
+    Dropdown,
+    DropdownItem,
+    DropdownMenu,
+    DropdownToggle,
     Nav,
     Navbar,
     NavbarBrand,
@@ -47,39 +51,37 @@
 <Styles />
 
 <main>
-  <Navbar style="background-color:#49a9a7;">
-    <NavbarBrand style="color: white;">
+  <Navbar color="primary" theme="dark">
+    <NavbarBrand class="link-light">
       <img src="/tc-logo.png" alt="TC logo" height="36px" />
       Resource database
     </NavbarBrand>
     <Nav>
       <NavItem>
-        <NavLink style="color: white;" href="/new">New</NavLink>
+        <NavLink class="link-light" href="/new">New</NavLink>
       </NavItem>
-      <NavItem>
-        <NavLink style="color: white;" href="/query">Query</NavLink>
-      </NavItem>
-      <NavItem>
-        <NavLink style="color: white;" href="/aggregate">Aggregate</NavLink>
-      </NavItem>
+      <Dropdown nav>
+        <DropdownToggle nav caret class="link-light">Advanced Search</DropdownToggle>
+        <DropdownMenu>
+          <DropdownItem href="/query">Cross-type Query</DropdownItem>
+          <DropdownItem href="/aggregate">Cross-type Aggregate</DropdownItem>
+        </DropdownMenu>
+      </Dropdown>
       {#if auth.authenticated}
         <NavItem>
-          <NavLink style="color: white;" href="/mine">My Workspace</NavLink>
+          <NavLink class="link-light" href="/mine">My Workspace</NavLink>
         </NavItem>
       {/if}
-      <NavItem>
-        <NavLink style="color: white;" href="/dev-test">Test</NavLink>
-      </NavItem>
       {#if auth.authenticated}
         <NavItem>
-          <span class="nav-link username">{auth.user?.name || auth.user?.sub}</span>
+          <span class="nav-link text-warning">{auth.user?.name || auth.user?.sub}</span>
         </NavItem>
         <NavItem>
-          <NavLink style="color: white;" onclick={doLogout}>Logout</NavLink>
+          <NavLink class="link-light" onclick={doLogout}>Logout</NavLink>
         </NavItem>
       {:else}
         <NavItem>
-          <NavLink style="color: white;" onclick={doLogin}>Login</NavLink>
+          <NavLink class="link-light" onclick={doLogin}>Login</NavLink>
         </NavItem>
       {/if}
     </Nav>
@@ -87,9 +89,3 @@
 
   <Router />
 </main>
-
-<style>
-  .username {
-    color: #ffeaa7;
-  }
-</style>

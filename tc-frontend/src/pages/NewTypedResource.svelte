@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Col, Container, Row } from "@sveltestrap/sveltestrap";
+    import { Col, Container, Input, Label, Row } from "@sveltestrap/sveltestrap";
     import { getContext } from "svelte";
     import { BaseProcessor, registry } from "../modules/registry";
     import NewResource from "../components/NewResource.svelte";
@@ -71,12 +71,13 @@
     {/if}
     <Row>
         <Col>
-            <select bind:value={selected}>
+            <Label>Type</Label>
+            <Input type="select" bind:value={selected}>
                 <option value="">Select type</option>
                 {#each registry.allEditors() as { type: type_id, name }}
                     <option value={type_id}>{name}</option>
                 {/each}
-            </select>
+            </Input>
 
             {#if processor}
                 <processor.editor bind:this={editorInstance} />

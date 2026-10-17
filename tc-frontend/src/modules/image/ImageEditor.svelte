@@ -1,6 +1,8 @@
 <script lang="ts">
     import { onDestroy } from "svelte";
+    import { Button, Card, CardBody } from "@sveltestrap/sveltestrap";
     import type { EditorProps } from "../registry";
+    import Stack from "../../components/ui/Stack.svelte";
     import { deleteImage, uploadImage } from "../../lib/api/files";
     import { imageThumbUrl } from "../../lib/utils/image";
     import AuthImage from "../../components/AuthImage.svelte";
@@ -155,9 +157,9 @@
     }
 </script>
 
-<div id="main">
+<Stack gap={3}>
     <div
-        class="dropzone"
+        class="dropzone text-center p-3"
         class:active={dragActive}
         role="button"
         tabindex="0"
@@ -168,131 +170,102 @@
         ondragleave={() => (dragActive = false)}
         ondrop={onDrop}
     >
-        <p>Drag images here, or</p>
-        <label class="file-btn">
+        <p class="mb-2 text-secondary">Drag images here, or</p>
+        <label class="btn btn-outline-primary btn-sm mb-2">
             Choose images
-            <input type="file" accept="image/*" multiple onchange={onFileInput} />
+            <input class="d-none" type="file" accept="image/*" multiple onchange={onFileInput} />
         </label>
-        <p class="hint">Supports multiple images; originals are uploaded and thumbnails generated automatically.</p>
+        <p class="small text-secondary mb-0">
+            Supports multiple images; originals are uploaded and thumbnails generated automatically.
+        </p>
     </div>
 
     {#if images.length === 0}
-        <p class="text-muted">No images yet</p>
+        <p class="text-muted mb-0">No images yet</p>
     {:else}
-        <div class="grid">
+        <div class="row g-3">
             {#each images as img (img.key)}
-                <div class="card" class:error={img.status === "error"}>
-                    <div class="thumb">
-                        {#if img.localUrl}
-                            <img src={img.localUrl} alt={img.caption || img.original_name || ""} />
-                        {:else if img.file_id}
-                            <AuthImage src={imageThumbUrl(img.file_id)} alt={img.caption || ""} />
-                        {/if}
-                        {#if img.status === "uploading"}
-                            <div class="overlay">Uploading…</div>
-                        {:else if img.status === "error"}
-                            <div class="overlay err" title={img.error}>Upload failed</div>
-                        {/if}
-                    </div>
-                    <input
-                        class="caption"
-                        type="text"
-                        placeholder="Caption"
-                        value={img.caption}
-                        oninput={(e: Event) => setCaption(img.key, (e.target as HTMLInputElement).value)}
-                    />
-                    <div class="card-actions">
-                        <button
-                            class="mini"
-                            title="Move up"
-                            disabled={images.indexOf(img) === 0}
-                            onclick={() => moveImage(img.key, -1)}
-                        >↑</button>
-                        <button
-                            class="mini"
-                            title="Move down"
-                            disabled={images.indexOf(img) === images.length - 1}
-                            onclick={() => moveImage(img.key, 1)}
-                        >↓</button>
-                        <button class="mini del" title="Delete" onclick={() => removeImage(img.key)}>×</button>
-                    </div>
+                <div class="col-6 col-md-4 col-lg-3">
+                    <Card class={img.status === "error" ? "border-danger" : ""}>
+                        <CardBody class="p-2 d-flex flex-column gap-2">
+                            <div class="thumb">
+                                {#if img.localUrl}
+                                    <img
+                                        class="w-100 h-100 object-fit-cover"
+                                        src={img.localUrl}
+                                        alt={img.caption || img.original_name || ""}
+                                    />
+                                {:else if img.file_id}
+                                    <AuthImage
+                                        src={imageThumbUrl(img.file_id)}
+                                        alt={img.caption || ""}
+                                        className="w-100 h-100 object-fit-cover"
+                                    />
+                                {/if}
+                                {#if img.status === "uploading"}
+                                    <div class="overlay">Uploading…</div>
+                                {:else if img.status === "error"}
+                                    <div class="overlay err" title={img.error}>Upload failed</div>
+                                {/if}
+                            </div>
+                            <input
+                                class="form-control form-control-sm"
+                                type="text"
+                                placeholder="Caption"
+                                value={img.caption}
+                                oninput={(e: Event) => setCaption(img.key, (e.target as HTMLInputElement).value)}
+                            />
+                            <div class="d-flex gap-1">
+                                <Button
+                                    size="sm"
+                                    color="outline-secondary"
+                                    title="Move up"
+                                    disabled={images.indexOf(img) === 0}
+                                    onclick={() => moveImage(img.key, -1)}
+                                >↑</Button>
+                                <Button
+                                    size="sm"
+                                    color="outline-secondary"
+                                    title="Move down"
+                                    disabled={images.indexOf(img) === images.length - 1}
+                                    onclick={() => moveImage(img.key, 1)}
+                                >↓</Button>
+                                <Button
+                                    size="sm"
+                                    color="link"
+                                    class="text-danger ms-auto"
+                                    title="Delete"
+                                    onclick={() => removeImage(img.key)}
+                                >×</Button>
+                            </div>
+                        </CardBody>
+                    </Card>
                 </div>
             {/each}
         </div>
     {/if}
-</div>
+</Stack>
 
 <style>
-    #main {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
     .dropzone {
-        border: 2px dashed #c7cfcf;
-        border-radius: 8px;
-        padding: 18px;
-        text-align: center;
-        background: #fafcfc;
+        border: 2px dashed var(--bs-border-color);
+        border-radius: var(--bs-border-radius-lg);
+        background: var(--bs-tertiary-bg);
         transition: background 0.15s, border-color 0.15s;
     }
     .dropzone.active {
-        border-color: #49a9a7;
-        background: #eef7f6;
-    }
-    .dropzone p {
-        margin: 4px 0;
-        color: #666;
-        font-size: 0.9em;
-    }
-    .hint {
-        font-size: 0.78em !important;
-        color: #999 !important;
-    }
-    .file-btn {
-        display: inline-block;
-        border: 1px solid #49a9a7;
-        color: #2b7b79;
-        background: #fff;
-        border-radius: 4px;
-        padding: 4px 14px;
-        cursor: pointer;
-        font-size: 0.88em;
-    }
-    .file-btn input {
-        display: none;
-    }
-    .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 12px;
-    }
-    .card {
-        border: 1px solid #e2e2e2;
-        border-radius: 6px;
-        padding: 8px;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        background: #fafafa;
-    }
-    .card.error {
-        border-color: #e0b4b4;
+        border-color: var(--bs-primary);
+        background: rgba(var(--bs-primary-rgb), 0.1);
     }
     .thumb {
         position: relative;
         aspect-ratio: 4 / 3;
-        background: #eef1f1;
-        border-radius: 4px;
+        background: var(--bs-secondary-bg);
+        border-radius: var(--bs-border-radius);
         overflow: hidden;
         display: flex;
         align-items: center;
         justify-content: center;
-    }
-    .thumb img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
     }
     .overlay {
         position: absolute;
@@ -300,38 +273,12 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background: rgba(255, 255, 255, 0.75);
+        background: rgba(var(--bs-white-rgb), 0.75);
         font-size: 0.82em;
-        color: #555;
+        color: var(--bs-secondary-color);
     }
     .overlay.err {
-        color: #b00020;
-        background: rgba(255, 235, 235, 0.85);
-    }
-    .caption {
-        border: 1px solid #ccc;
-        border-radius: 3px;
-        padding: 3px 6px;
-        font-size: 0.85em;
-    }
-    .card-actions {
-        display: flex;
-        gap: 6px;
-    }
-    .mini {
-        border: 1px solid #ccc;
-        border-radius: 3px;
-        background: #fff;
-        cursor: pointer;
-        font-size: 0.85em;
-        padding: 1px 8px;
-    }
-    .mini:disabled {
-        opacity: 0.4;
-        cursor: default;
-    }
-    .mini.del {
-        color: #c00;
-        margin-left: auto;
+        color: var(--bs-danger);
+        background: rgba(var(--bs-danger-rgb), 0.15);
     }
 </style>

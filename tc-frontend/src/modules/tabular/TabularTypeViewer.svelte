@@ -1,6 +1,17 @@
 <script lang="ts">
-    import { Col, Row } from "@sveltestrap/sveltestrap";
+    import {
+        Button,
+        Card,
+        CardBody,
+        CardHeader,
+        Col,
+        Input,
+        Row,
+        Table,
+    } from "@sveltestrap/sveltestrap";
     import type { TypeViewerProps } from "../registry";
+    import Legend from "../../components/ui/Legend.svelte";
+    import { chartColor } from "../../lib/utils/ui";
 
     interface DataRow {
         id_idx?: string | null
@@ -196,10 +207,6 @@
     function fmtNum(n: number): string {
         return Number.isFinite(n) ? n.toFixed(4).replace(/\.?0+$/, "") : String(n)
     }
-    const seriesColors = ["#49a9a7", "#e74c3c", "#f39c12", "#2ecc71", "#9b59b6", "#3498db", "#e67e22", "#1abc9c"]
-    function seriesColor(idx: number): string {
-        return seriesColors[idx % seriesColors.length]
-    }
     let yTicks = $derived.by(() => {
         if (!chartData) return []
         const { yMin, yMax } = chartData
@@ -213,58 +220,74 @@
 {#if parsedItems.length === 0}
     <p class="text-muted">No valid Tabular data in selected items.</p>
 {:else}
-    <Row>
+    <Row class="g-3">
         <Col xs="3">
-            <div class="sidebar">
-                <h6>Channels</h6>
-                <div class="checkbox-list">
-                    {#each channelNames as name}
-                        <label class="check-item">
-                            <input type="checkbox" checked={selectedChannels.has(name)} onchange={() => toggleChannel(name)} />
-                            {name}
-                        </label>
-                    {/each}
-                </div>
-                <h6>Chart type</h6>
-                <div class="radio-list">
-                    <label class="radio-item"><input type="radio" bind:group={chartType} value="line" /> Line</label>
-                    <label class="radio-item"><input type="radio" bind:group={chartType} value="bar" /> Bar</label>
-                    <label class="radio-item"><input type="radio" bind:group={chartType} value="scatter" /> Scatter</label>
-                </div>
-                <h6>Aggregation</h6>
-                <select bind:value={aggMethod} class="form-select">
-                    <option value="mean">Mean</option>
-                    <option value="median">Median</option>
-                    <option value="min">Min</option>
-                    <option value="max">Max</option>
-                </select>
-            </div>
+            <Card>
+                <CardHeader class="py-2 fw-semibold">Channels</CardHeader>
+                <CardBody class="pt-2">
+                    <div class="checkbox-list">
+                        {#each channelNames as name}
+                            <label class="form-check mb-1">
+                                <input
+                                    class="form-check-input"
+                                    type="checkbox"
+                                    checked={selectedChannels.has(name)}
+                                    onchange={() => toggleChannel(name)}
+                                />
+                                <span class="form-check-label">{name}</span>
+                            </label>
+                        {/each}
+                    </div>
+
+                    <div class="fw-semibold border-bottom pb-1 mb-2 mt-3">Chart type</div>
+                    <label class="form-check mb-1">
+                        <input class="form-check-input" type="radio" bind:group={chartType} value="line" />
+                        <span class="form-check-label">Line</span>
+                    </label>
+                    <label class="form-check mb-1">
+                        <input class="form-check-input" type="radio" bind:group={chartType} value="bar" />
+                        <span class="form-check-label">Bar</span>
+                    </label>
+                    <label class="form-check">
+                        <input class="form-check-input" type="radio" bind:group={chartType} value="scatter" />
+                        <span class="form-check-label">Scatter</span>
+                    </label>
+
+                    <div class="fw-semibold border-bottom pb-1 mb-2 mt-3">Aggregation</div>
+                    <Input type="select" bsSize="sm" bind:value={aggMethod}>
+                        <option value="mean">Mean</option>
+                        <option value="median">Median</option>
+                        <option value="min">Min</option>
+                        <option value="max">Max</option>
+                    </Input>
+                </CardBody>
+            </Card>
         </Col>
         <Col xs="9">
             <div class="main-area">
                 {#if chartData}
                     {@const { allSeries, sortedRowKeys, yMin, yMax, xStep } = chartData}
                     <svg viewBox="0 0 {chartWidth} {chartHeight}" class="chart-svg">
-                        <line x1={margin.left} y1={margin.top} x2={margin.left} y2={margin.top + plotH} stroke="#ccc" />
-                        <line x1={margin.left} y1={margin.top + plotH} x2={margin.left + plotW} y2={margin.top + plotH} stroke="#ccc" />
+                        <line x1={margin.left} y1={margin.top} x2={margin.left} y2={margin.top + plotH} stroke="var(--bs-border-color)" />
+                        <line x1={margin.left} y1={margin.top + plotH} x2={margin.left + plotW} y2={margin.top + plotH} stroke="var(--bs-border-color)" />
                         {#each yTicks as tick}
                             {@const y = scaleY(tick, yMin, yMax)}
-                            <line x1={margin.left} y1={y} x2={margin.left + plotW} y2={y} stroke="#eee" stroke-dasharray="4,4" />
-                            <text x={margin.left - 8} y={y + 4} text-anchor="end" font-size="11" fill="#666">{fmtNum(tick)}</text>
+                            <line x1={margin.left} y1={y} x2={margin.left + plotW} y2={y} stroke="var(--bs-border-color-translucent)" stroke-dasharray="4,4" />
+                            <text x={margin.left - 8} y={y + 4} text-anchor="end" font-size="11" fill="var(--bs-secondary-color)">{fmtNum(tick)}</text>
                         {/each}
                         {#each sortedRowKeys as rk, idx}
                             {@const x = scaleX(idx, xStep)}
-                            <line x1={x} y1={margin.top + plotH} x2={x} y2={margin.top + plotH + 5} stroke="#999" />
-                            <text x={x} y={margin.top + plotH + 18} text-anchor="middle" font-size="10" fill="#666" transform="rotate(-30,{x},{margin.top + plotH + 18})">{rk}</text>
+                            <line x1={x} y1={margin.top + plotH} x2={x} y2={margin.top + plotH + 5} stroke="var(--bs-border-color)" />
+                            <text x={x} y={margin.top + plotH + 18} text-anchor="middle" font-size="10" fill="var(--bs-secondary-color)" transform="rotate(-30,{x},{margin.top + plotH + 18})">{rk}</text>
                         {/each}
                         {#if chartType === "line"}
                             {#each allSeries as s, si}
                                 {@const pts = s.points.map((p, i) => p.value !== null ? `${scaleX(i, xStep)},${scaleY(p.value, yMin, yMax)}` : null).filter(Boolean)}
                                 {#if pts.length > 0}
-                                    <polyline points={pts.join(" ")} fill="none" stroke={seriesColor(si)} stroke-width="2" />
+                                    <polyline points={pts.join(" ")} fill="none" stroke={chartColor(si)} stroke-width="2" />
                                     {#each s.points as p, i}
                                         {#if p.value !== null}
-                                            <circle cx={scaleX(i, xStep)} cy={scaleY(p.value, yMin, yMax)} r="3" fill={seriesColor(si)} />
+                                            <circle cx={scaleX(i, xStep)} cy={scaleY(p.value, yMin, yMax)} r="3" fill={chartColor(si)} />
                                         {/if}
                                     {/each}
                                 {/if}
@@ -276,7 +299,7 @@
                                     {#if p.value !== null}
                                         {@const x = scaleX(i, xStep) - (allSeries.length * barWidth) / 2 + si * barWidth + barWidth / 2}
                                         {@const y = scaleY(p.value, yMin, yMax)}
-                                        <rect x={x - barWidth / 2} y={y} width={barWidth} height={plotH - (y - margin.top)} fill={seriesColor(si)} opacity="0.8" />
+                                        <rect x={x - barWidth / 2} y={y} width={barWidth} height={plotH - (y - margin.top)} fill={chartColor(si)} opacity="0.8" />
                                     {/if}
                                 {/each}
                             {/each}
@@ -284,33 +307,32 @@
                             {#each allSeries as s, si}
                                 {#each s.points as p, i}
                                     {#if p.value !== null}
-                                        <circle cx={scaleX(i, xStep)} cy={scaleY(p.value, yMin, yMax)} r="5" fill={seriesColor(si)} opacity="0.8" />
+                                        <circle cx={scaleX(i, xStep)} cy={scaleY(p.value, yMin, yMax)} r="5" fill={chartColor(si)} opacity="0.8" />
                                     {/if}
                                 {/each}
                             {/each}
                         {/if}
                     </svg>
-                    <div class="legend">
-                        {#each allSeries as s, si}
-                            <span class="legend-item"><span class="legend-swatch" style="background:{seriesColor(si)}"></span>{s.channelKey} / {s.itemTitle}</span>
-                        {/each}
-                    </div>
+                    <Legend
+                        class="mt-2"
+                        items={allSeries.map((s, si) => ({ label: `${s.channelKey} / ${s.itemTitle}`, color: chartColor(si) }))}
+                    />
                 {:else}
                     <p class="text-muted">Select channels to view chart.</p>
                 {/if}
                 {#if summaryRows.length > 0}
                     <h6 class="mt-3">Summary</h6>
-                    <div class="table-wrap">
-                        <table class="summary-table">
-                            <thead>
+                    <div class="summary-wrap">
+                        <Table bordered hover size="sm" class="small align-middle mb-0">
+                            <thead class="sticky-top">
                                 <tr><th>Channel</th><th>Item</th><th>Count</th><th>Mean</th><th>Min</th><th>Max</th></tr>
                             </thead>
                             <tbody>
                                 {#each summaryRows as row}
-                                    <tr><td>{row.channelKey}</td><td>{row.itemTitle}</td><td>{row.count}</td><td class="mono">{fmtNum(row.mean)}</td><td class="mono">{fmtNum(row.min)}</td><td class="mono">{fmtNum(row.max)}</td></tr>
+                                    <tr><td>{row.channelKey}</td><td>{row.itemTitle}</td><td>{row.count}</td><td class="font-monospace text-end">{fmtNum(row.mean)}</td><td class="font-monospace text-end">{fmtNum(row.min)}</td><td class="font-monospace text-end">{fmtNum(row.max)}</td></tr>
                                 {/each}
                             </tbody>
-                        </table>
+                        </Table>
                     </div>
                 {/if}
             </div>
@@ -319,20 +341,25 @@
 {/if}
 
 <style>
-    .sidebar { background: #f7f7f8; border-radius: 6px; padding: 12px; }
-    .sidebar h6 { margin-top: 12px; margin-bottom: 6px; font-size: 0.85em; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
-    .sidebar h6:first-child { margin-top: 0; }
-    .checkbox-list, .radio-list { display: flex; flex-direction: column; gap: 4px; }
-    .check-item, .radio-item { font-size: 0.85em; cursor: pointer; display: flex; align-items: center; gap: 4px; }
-    .form-select { width: 100%; padding: 4px 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.85em; }
-    .main-area { min-height: 200px; }
-    .chart-svg { width: 100%; height: auto; border: 1px solid #eee; border-radius: 4px; background: #fff; }
-    .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
-    .legend-item { display: flex; align-items: center; gap: 4px; font-size: 0.8em; }
-    .legend-swatch { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
-    .table-wrap { max-height: 300px; overflow-y: auto; }
-    .summary-table { width: 100%; border-collapse: collapse; font-size: 0.85em; }
-    .summary-table th, .summary-table td { padding: 3px 8px; border: 1px solid #e0e0e0; text-align: left; }
-    .summary-table th { background: #f7f7f8; position: sticky; top: 0; }
-    .mono { font-family: monospace; text-align: right; }
+    .checkbox-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+    .main-area {
+        min-height: 200px;
+    }
+    .chart-svg {
+        width: 100%;
+        height: auto;
+        border: 1px solid var(--bs-border-color);
+        border-radius: var(--bs-border-radius);
+        background: var(--bs-body-bg);
+    }
+    .summary-wrap {
+        max-height: 300px;
+        overflow-y: auto;
+    }
 </style>

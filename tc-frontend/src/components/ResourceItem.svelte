@@ -4,134 +4,125 @@
         Card,
         CardBody,
         CardFooter,
-        CardSubtitle,
-        CardText,
-        NavLink,
+        CardTitle,
     } from "@sveltestrap/sveltestrap";
     import type { ItemMeta } from "../types";
     import { getContext } from "svelte";
     import { hasRole, getAuthContext } from "../lib/auth.js";
+    import {
+        statusColor,
+        statusLabel,
+        typeColor,
+        visibilityColor,
+    } from "../lib/utils/ui";
+    import TagChip from "./ui/TagChip.svelte";
 
-    let { item }: { item: ItemMeta } = $props();
+    let {
+        item,
+        class: className = "",
+    }: {
+        item: ItemMeta;
+        class?: string;
+    } = $props();
     let metahub_host = (getContext("mh_host") as string) || "";
 
     let canEdit = $derived(
         hasRole("nodes:edit_any") ||
         (item.creator_sub === getAuthContext()?.user?.sub)
     );
-
-    function hashString(s: string) {
-        let h = 0;
-        for (let i = 0; i < s.length; i++) {
-            h = (h << 5) - h + s.charCodeAt(i);
-            h |= 0;
-        }
-        return Math.abs(h);
-    }
-
-    function colorFromHash(s: string) {
-        const h = hashString(s.split(".")[0]);
-        const hue = h % 360;
-        return `hsl(${hue} 65% 45%)`;
-    }
-
-    function statusColor(status: string): string {
-        switch (status) {
-            case "draft": return "secondary";
-            case "pending_review": return "warning";
-            case "published": return "success";
-            case "archived": return "dark";
-            default: return "secondary";
-        }
-    }
-
-    function statusLabel(status: string): string {
-        switch (status) {
-            case "draft": return "Draft";
-            case "pending_review": return "In Review";
-            case "published": return "Published";
-            case "archived": return "Archived";
-            default: return status;
-        }
-    }
-
-    function visibilityColor(visibility: string): string {
-        switch (visibility) {
-            case "internal": return "info";
-            case "confidential": return "danger";
-            default: return "light";
-        }
-    }
-
-    const barTextColor = "white";
 </script>
 
-<Card class="mb-1 {item.data_type ? 'ps-2' : ''}">
-    <CardBody>
-        <CardSubtitle style="border-left: 4px solid gray; padding-left: 6px;">
-            <NavLink href="/items/{item.id}">{item.title}</NavLink>
-        </CardSubtitle>
-        <p class="update_date">
-            {#if item.creator_name}
-                <span class="creator">{item.creator_name}</span>
-            {/if}
-            {#if item.visibility && item.visibility !== "public"}
-                <Badge color={visibilityColor(item.visibility)} class="ms-1">{item.visibility}</Badge>
-            {/if}
-            <Badge color={statusColor(item.status)} class="ms-1">{statusLabel(item.status)}</Badge>
-            {#if canEdit}
-                <NavLink href="/items/{item.id}?edit=1" class="ms-1">Edit</NavLink>
-            {/if}
-            {item.update_time.toLocaleDateString()}
-        </p>
-        <CardText>{item.description}</CardText>
-    </CardBody>
-    <CardFooter>
-        {#each item.tags as tag}
-            <Badge
-                pill
-                class="me-1"
-                href="/tags/{tag.id}/{encodeURI(tag.name)}"
-            >
-                {tag.name}
-                <a
-                    class="metahub-reg"
-                    href={`${metahub_host}/registered/${tag.id}/${encodeURI(tag.name)}`}
-                    >🔗</a
-                >
-            </Badge>
-        {/each}
-    </CardFooter>
+<Card class="position-relative shadow-sm {item.data_type ? 'ps-4' : ''} {className}">
     {#if item.data_type}
         <div
-            class="type-bar"
-            style="background:{colorFromHash(
-                item.data_type,
-            )}; color:{barTextColor};"
+            class="type-bar text-white"
+            style="background:{typeColor(item.data_type)}"
+            title={item.data_type}
         >
             <a class="type-text" href="/types/{encodeURI(item.data_type)}"
                 >{item.data_type}</a
             >
         </div>
     {/if}
+
+    <CardBody class="pb-2">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+            <div class="item-main">
+                <CardTitle class="h6 mb-1">
+                    <a class="item-title" href="/items/{item.id}">{item.title}</a>
+                </CardTitle>
+                {#if item.description}
+                    <p class="item-description text-secondary small mb-0" title={item.description}>
+                        {item.description}
+                    </p>
+                {/if}
+            </div>
+            <div class="d-flex align-items-center gap-1 flex-shrink-0">
+                {#if item.visibility && item.visibility !== "public"}
+                    <Badge class="text-bg-{visibilityColor(item.visibility)}">
+                        {item.visibility}
+                    </Badge>
+                {/if}
+                <Badge class="text-bg-{statusColor(item.status)}">
+                    {statusLabel(item.status)}
+                </Badge>
+            </div>
+        </div>
+    </CardBody>
+
+    <CardFooter class="py-2 d-flex flex-wrap align-items-center gap-2">
+        <div class="d-flex flex-wrap gap-1 flex-grow-1">
+            {#each item.tags as tag}
+                <TagChip {tag} metahubHost={metahub_host} />
+            {/each}
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-2 small text-secondary ms-auto">
+            {#if item.creator_name}
+                <span>{item.creator_name}</span>
+                <span>·</span>
+            {/if}
+            <span>{item.update_time.toLocaleDateString()}</span>
+            {#if canEdit}
+                <a class="link-primary text-decoration-none" href="/items/{item.id}?edit=1">
+                    Edit
+                </a>
+            {/if}
+        </div>
+    </CardFooter>
 </Card>
 
 <style>
-    a.metahub-reg {
+    .item-main {
+        min-width: 0;
+    }
+    .item-title {
+        color: var(--bs-body-color);
         text-decoration: none;
     }
-
+    .item-title:hover {
+        color: var(--bs-link-hover-color);
+        text-decoration: underline;
+    }
+    .item-description {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
     .type-bar {
         display: flex;
         align-items: center;
         justify-content: center;
-
         position: absolute;
-        left: -1px;
-        top: -1px;
-        bottom: -1px;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 1.5rem;
+        overflow: hidden;
+        border-top-left-radius: var(--bs-border-radius);
+        border-bottom-left-radius: var(--bs-border-radius);
     }
-
     .type-text {
         writing-mode: vertical-rl;
         text-orientation: mixed;
@@ -139,18 +130,7 @@
         font-weight: 600;
         font-size: 12px;
         white-space: nowrap;
-        color: white;
+        color: inherit;
         text-decoration: none;
-    }
-
-    p.update_date {
-        position: absolute;
-        top: 5px;
-        right: 5px;
-        color: gray;
-        font-size: smaller;
-        display: flex;
-        align-items: center;
-        gap: 6px;
     }
 </style>

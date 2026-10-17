@@ -167,13 +167,13 @@
         <div class="viewer-layout">
             <div class="viewer-topbar">
                 <h4 class="type-title">Type: {type_name}</h4>
-                <div class="topbar-right">
+                <div class="d-flex align-items-center gap-2">
                     {#if hasManualSelection}
-                        <span class="selection-info">{selectedIds.size} selected</span>
+                        <span class="badge text-bg-primary">{selectedIds.size} selected</span>
                     {/if}
-                    <button class="panel-toggle" onclick={() => { panelOpen = !panelOpen }}>
+                    <Button size="sm" color="outline-secondary" onclick={() => { panelOpen = !panelOpen }}>
                         {panelOpen ? "◀" : "▶"} Items
-                    </button>
+                    </Button>
                 </div>
             </div>
 
@@ -195,7 +195,7 @@
                 <div class="slide-panel" class:visible={panelOpen}>
                     <div class="panel-header">
                         <span>Items ({totalItems})</span>
-                        <button class="panel-close" onclick={() => { panelOpen = false }}>×</button>
+                        <Button size="sm" color="link" class="text-secondary px-1" onclick={() => { panelOpen = false }}>×</Button>
                     </div>
 
                     {#if loading}
@@ -206,15 +206,19 @@
                         <p class="text-muted px-2">No items of type "{type_name}".</p>
                     {:else}
                         <div class="panel-toolbar">
-                            <label class="select-all-label"><input type="checkbox" checked={allPageChecked} onchange={toggleAll} /> Select page</label>
+                            <label class="form-check m-0">
+                                <input class="form-check-input" type="checkbox" checked={allPageChecked} onchange={toggleAll} />
+                                <span class="form-check-label">Select page</span>
+                            </label>
                             {#if selectedIds.size > 0}
-                                <button class="btn-clear" onclick={clearAll}>Clear all</button>
+                                <Button size="sm" color="link" class="text-danger p-0" onclick={clearAll}>Clear all</Button>
                             {/if}
                         </div>
                         <div class="panel-list">
                             {#each items as item (item.id)}
                                 <label class="panel-item" class:checked={selectedIds.has(item.id!)}>
                                     <input
+                                        class="form-check-input mt-1"
                                         type="checkbox"
                                         checked={selectedIds.has(item.id!)}
                                         onchange={() => toggleItem(item.id!)}
@@ -270,7 +274,7 @@
             <p class="text-muted">No resources of type "{type_name}" found.</p>
         {:else}
             <p class="text-muted">{totalItems} results (Page {currentPage} / {totalPages})</p>
-            <ListGroup class="mt-2">
+            <ListGroup class="mt-2 d-flex flex-column gap-2">
                 {#each items as item}
                     <ResourceItem {item} />
                 {/each}
@@ -309,38 +313,14 @@
     .viewer-topbar {
         display: flex;
         align-items: center;
-        gap: 12px;
-        padding: 8px 0;
-        border-bottom: 1px solid #e0e0e0;
+        gap: 0.75rem;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--bs-border-color);
         flex-shrink: 0;
     }
     .type-title {
         margin: 0;
         flex: 1;
-    }
-    .topbar-right {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .selection-info {
-        font-size: 0.8em;
-        color: #49a9a7;
-        background: #e8f5f4;
-        padding: 2px 8px;
-        border-radius: 3px;
-    }
-    .panel-toggle {
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        background: #fff;
-        padding: 4px 10px;
-        cursor: pointer;
-        font-size: 0.85em;
-        white-space: nowrap;
-    }
-    .panel-toggle:hover {
-        background: #f0f0f0;
     }
     .viewer-body {
         display: flex;
@@ -351,10 +331,10 @@
     .viewer-main {
         flex: 1;
         overflow-y: auto;
-        padding: 8px 0;
+        padding: 0.5rem 0;
     }
     .hint {
-        margin-top: 40px;
+        margin-top: 2.5rem;
         text-align: center;
     }
 
@@ -362,7 +342,7 @@
         display: block;
         position: absolute;
         inset: 0;
-        background: rgba(0,0,0,0.2);
+        background: rgba(var(--bs-black-rgb), 0.2);
         z-index: 5;
     }
 
@@ -372,8 +352,8 @@
         top: 0;
         bottom: 0;
         width: 320px;
-        background: #fff;
-        border-left: 1px solid #ddd;
+        background: var(--bs-body-bg);
+        border-left: 1px solid var(--bs-border-color);
         transform: translateX(100%);
         transition: transform 0.25s ease;
         z-index: 10;
@@ -388,47 +368,20 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 8px 12px;
-        border-bottom: 1px solid #e0e0e0;
+        padding: 0.5rem 0.75rem;
+        border-bottom: 1px solid var(--bs-border-color);
         font-weight: 600;
         font-size: 0.9em;
         flex-shrink: 0;
     }
-    .panel-close {
-        border: none;
-        background: none;
-        font-size: 1.3em;
-        cursor: pointer;
-        color: #999;
-        padding: 0 4px;
-    }
-    .panel-close:hover { color: #333; }
     .panel-toolbar {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 4px 12px;
+        padding: 0.25rem 0.75rem;
         font-size: 0.8em;
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid var(--bs-border-color-translucent);
         flex-shrink: 0;
-    }
-    .select-all-label {
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 4px;
-    }
-    .btn-clear {
-        border: 1px solid #ddd;
-        border-radius: 3px;
-        background: #fff;
-        color: #c00;
-        cursor: pointer;
-        font-size: 0.85em;
-        padding: 2px 8px;
-    }
-    .btn-clear:hover {
-        background: #fff0f0;
     }
     .panel-list {
         flex: 1;
@@ -437,19 +390,15 @@
     .panel-item {
         display: flex;
         align-items: flex-start;
-        gap: 8px;
-        padding: 8px 12px;
-        border-bottom: 1px solid #f5f5f5;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        border-bottom: 1px solid var(--bs-border-color-translucent);
         cursor: pointer;
         transition: background 0.1s;
         font-size: 0.85em;
     }
-    .panel-item:hover { background: #f9f9f9; }
-    .panel-item.checked { background: #e8f5f4; }
-    .panel-item input[type="checkbox"] {
-        margin-top: 2px;
-        flex-shrink: 0;
-    }
+    .panel-item:hover { background: var(--bs-tertiary-bg); }
+    .panel-item.checked { background: rgba(var(--bs-primary-rgb), 0.1); }
     .panel-item-info {
         min-width: 0;
     }
@@ -461,19 +410,19 @@
     }
     .panel-item-desc {
         font-size: 0.85em;
-        color: #888;
+        color: var(--bs-secondary-color);
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
     }
     .panel-actions {
-        padding: 6px 12px;
-        border-top: 1px solid #e0e0e0;
+        padding: 0.375rem 0.75rem;
+        border-top: 1px solid var(--bs-border-color);
         flex-shrink: 0;
     }
     .panel-pagination {
-        padding: 8px 4px;
-        border-top: 1px solid #e0e0e0;
+        padding: 0.5rem 0.25rem;
+        border-top: 1px solid var(--bs-border-color);
         flex-shrink: 0;
         overflow-x: auto;
     }

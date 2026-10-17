@@ -34,6 +34,25 @@ Currently exposed:
 
 - `MH_HOST` — MetaHub base URL (used to resolve tag names)
 
+## Styling
+
+The UI is built on Bootstrap 5 via `@sveltestrap/sveltestrap`. Bootstrap and
+Bootstrap Icons are loaded by the `<Styles />` component in `App.svelte` (CDN),
+so downstream consumers must render `<Styles />` or provide the same styles.
+
+- Prefer sveltestrap components (`Card`, `Button`, `Input`, `Table`, …) and
+  Bootstrap utility classes over one-off CSS.
+- Use Bootstrap semantic colors and CSS variables (`var(--bs-body-color)`,
+  `var(--bs-border-color)`, `var(--bs-primary)`, …) instead of hard-coded
+  values.
+- Scoped `<style>` blocks are reserved for unique layouts such as the image
+  lightbox, slide-over panel, galleries and charts.
+- The teal brand color is defined in `src/styles/app.css` by overriding
+  `--bs-primary`, the link colors, and the few Bootstrap components whose
+  primary colors are compiled into the stylesheet. Downstream apps can override
+  the same variables to re-theme the exported components.
+- Exported components accept a `class` prop where an outer wrapper exists.
+
 ## Scripts
 
 - `pnpm dev` — Vite dev server

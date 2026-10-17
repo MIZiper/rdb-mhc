@@ -1,4 +1,7 @@
 <script lang="ts">
+    import { Button, Table } from "@sveltestrap/sveltestrap";
+    import Stack from "../../components/ui/Stack.svelte";
+
     interface ChannelDef {
         name: string
         id_name: string
@@ -100,192 +103,108 @@
     }
 </script>
 
-<div id="main">
-    <div class="meta-row">
-        <button class="btn-sm" onclick={addColumn}>+ Column (channel)</button>
-        <button class="btn-sm" onclick={addRow}>+ Row</button>
+<Stack gap={2}>
+    <div class="d-flex gap-2">
+        <Button size="sm" color="outline-secondary" onclick={addColumn}>+ Column (channel)</Button>
+        <Button size="sm" color="outline-secondary" onclick={addRow}>+ Row</Button>
     </div>
 
-    <div class="table-wrap">
-        <table>
-            <thead>
-                <tr>
-                    <th class="row-header">id_idx</th>
-                    <th class="row-header">time</th>
-                    {#each columns as col, colIdx}
-                        <th class="col-header">
-                            <div class="col-name">
-                                <input
-                                    type="text"
-                                    value={col.name}
-                                    oninput={(e: Event) => updateColumnField(colIdx, "name", (e.target as HTMLInputElement).value)}
-                                    class="th-input name-input"
-                                />
-                                <input
-                                    type="text"
-                                    value={col.id_name}
-                                    oninput={(e: Event) => updateColumnField(colIdx, "id_name", (e.target as HTMLInputElement).value)}
-                                    placeholder="id_name"
-                                    class="th-input id-input"
-                                />
-                            </div>
-                            {#if columns.length > 1}
-                                <button class="btn-del-th" onclick={() => removeColumn(colIdx)}>×</button>
-                            {/if}
-                        </th>
-                    {/each}
-                    <th class="spacer"></th>
-                </tr>
-            </thead>
-            <tbody>
-                {#each rows as row, rowIdx}
-                    <tr>
-                        <td class="row-header-cell">
+    <Table bordered size="sm" responsive class="align-middle">
+        <thead>
+            <tr>
+                <th>id_idx</th>
+                <th>time</th>
+                {#each columns as col, colIdx}
+                    <th class="col-header">
+                        <div class="d-flex flex-column gap-1">
                             <input
                                 type="text"
-                                value={row.id_idx}
-                                oninput={(e: Event) => updateRowField(rowIdx, "id_idx", (e.target as HTMLInputElement).value)}
-                                class="cell-input id-cell"
+                                value={col.name}
+                                oninput={(e: Event) => updateColumnField(colIdx, "name", (e.target as HTMLInputElement).value)}
+                                class="form-control form-control-sm name-input"
                             />
-                        </td>
-                        <td class="row-header-cell">
+                            <input
+                                type="text"
+                                value={col.id_name}
+                                oninput={(e: Event) => updateColumnField(colIdx, "id_name", (e.target as HTMLInputElement).value)}
+                                placeholder="id_name"
+                                class="form-control form-control-sm id-input"
+                            />
+                        </div>
+                        {#if columns.length > 1}
+                            <Button
+                                size="sm"
+                                color="link"
+                                class="text-danger px-1 mt-1"
+                                onclick={() => removeColumn(colIdx)}
+                            >×</Button>
+                        {/if}
+                    </th>
+                {/each}
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {#each rows as row, rowIdx}
+                <tr>
+                    <td class="bg-body-tertiary">
+                        <input
+                            type="text"
+                            value={row.id_idx}
+                            oninput={(e: Event) => updateRowField(rowIdx, "id_idx", (e.target as HTMLInputElement).value)}
+                            class="form-control form-control-sm id-cell"
+                        />
+                    </td>
+                    <td class="bg-body-tertiary">
+                        <input
+                            type="number"
+                            value={row.time}
+                            oninput={(e: Event) => updateRowField(rowIdx, "time", (e.target as HTMLInputElement).value)}
+                            class="form-control form-control-sm time-cell"
+                        />
+                    </td>
+                    {#each columns as _, colIdx}
+                        <td>
                             <input
                                 type="number"
-                                value={row.time}
-                                oninput={(e: Event) => updateRowField(rowIdx, "time", (e.target as HTMLInputElement).value)}
-                                class="cell-input time-cell"
+                                value={fmt(values[colIdx]?.[rowIdx] ?? null)}
+                                oninput={(e: Event) => updateValue(colIdx, rowIdx, (e.target as HTMLInputElement).value)}
+                                class="form-control form-control-sm val-cell"
+                                placeholder="null"
                             />
                         </td>
-                        {#each columns as _, colIdx}
-                            <td>
-                                <input
-                                    type="number"
-                                    value={fmt(values[colIdx]?.[rowIdx] ?? null)}
-                                    oninput={(e: Event) => updateValue(colIdx, rowIdx, (e.target as HTMLInputElement).value)}
-                                    class="cell-input val-cell"
-                                    placeholder="null"
-                                />
-                            </td>
-                        {/each}
-                        <td class="row-del">
-                            {#if rows.length > 1}
-                                <button class="btn-del" onclick={() => removeRow(rowIdx)}>×</button>
-                            {/if}
-                        </td>
-                    </tr>
-                {/each}
-            </tbody>
-        </table>
-    </div>
-</div>
+                    {/each}
+                    <td class="p-0 text-center">
+                        {#if rows.length > 1}
+                            <Button
+                                size="sm"
+                                color="link"
+                                class="text-danger px-1"
+                                onclick={() => removeRow(rowIdx)}
+                            >×</Button>
+                        {/if}
+                    </td>
+                </tr>
+            {/each}
+        </tbody>
+    </Table>
+</Stack>
 
 <style>
-    #main {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-    .meta-row {
-        display: flex;
-        gap: 8px;
-    }
-    .btn-sm {
-        padding: 2px 10px;
-        border: 1px solid #999;
-        border-radius: 4px;
-        background: #fff;
-        cursor: pointer;
-        font-size: 0.85em;
-    }
-    .table-wrap {
-        overflow-x: auto;
-    }
-    table {
-        border-collapse: collapse;
-    }
-    th, td {
-        padding: 2px 4px;
-        border: 1px solid #e0e0e0;
-        white-space: nowrap;
-    }
-    th {
-        background: #f7f7f8;
-        vertical-align: top;
-    }
-    .row-header {
-        min-width: 60px;
-    }
     .col-header {
-        min-width: 80px;
-        position: relative;
+        min-width: 100px;
     }
-    .col-name {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-    }
-    .th-input {
-        border: 1px solid #ddd;
-        border-radius: 3px;
-        padding: 1px 4px;
-        font-size: 0.8em;
-    }
-    .name-input {
-        width: 70px;
-    }
+    .name-input,
     .id-input {
-        width: 70px;
-        font-size: 0.75em;
-        opacity: 0.7;
-    }
-    .btn-del-th {
-        border: none;
-        background: none;
-        color: #c00;
-        cursor: pointer;
-        font-weight: bold;
-        font-size: 0.85em;
-        padding: 0 2px;
-        position: absolute;
-        top: 0;
-        right: 0;
-    }
-    .cell-input {
-        border: 1px solid #eee;
-        border-radius: 2px;
-        padding: 2px 4px;
-        font-size: 0.85em;
-        width: 100%;
-        box-sizing: border-box;
+        width: 100px;
     }
     .id-cell {
-        width: 70px;
+        width: 80px;
     }
     .time-cell {
-        width: 60px;
-    }
-    .val-cell {
         width: 70px;
     }
-    .row-header-cell {
-        background: #fafafa;
-    }
-    .row-del {
-        padding: 0;
-        width: 20px;
-    }
-    .btn-del {
-        border: none;
-        background: none;
-        color: #c00;
-        cursor: pointer;
-        font-weight: bold;
-        font-size: 1em;
-        padding: 2px 4px;
-    }
-    .spacer {
-        border: none;
-        min-width: 0;
-        width: 20px;
+    .val-cell {
+        width: 80px;
     }
 </style>

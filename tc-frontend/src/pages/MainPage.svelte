@@ -54,8 +54,10 @@
     });
 </script>
 
-<Container class="my-2" fluid>
-    <Row>
+<Container class="my-3" fluid>
+    <h4 class="mb-3">Resources</h4>
+
+    <Row class="mb-3">
         <Col>
             <Input
                 type="search"
@@ -80,17 +82,17 @@
     </Row>
 
     {#if list.loading}
-        <p>Loading...</p>
+        <p class="text-muted">Loading...</p>
     {:else if list.error}
-        <p class="error">Error: {list.error}</p>
+        <p class="text-danger">Error: {list.error}</p>
     {:else if list.items.length === 0}
-        <p>No results found.</p>
+        <p class="text-muted">No results found.</p>
     {:else}
-        <p class="meta">
+        <p class="text-muted small">
             {list.total} results (Page {list.page} / {list.totalPages})
         </p>
 
-        <ListGroup class="mt-2">
+        <ListGroup class="mt-2 d-flex flex-column gap-2">
             {#each list.items as item}
                 <ResourceItem {item} />
             {/each}

@@ -1,5 +1,7 @@
 <script lang="ts">
+    import { Button, Card, CardBody } from "@sveltestrap/sveltestrap";
     import type { EditorProps } from "../registry";
+    import Stack from "../../components/ui/Stack.svelte";
     import {
         extractVariables,
         parseExpression,
@@ -118,228 +120,120 @@
     }
 </script>
 
-<div id="main">
-    <div class="toolbar">
-        <button class="btn-sm" onclick={addFormula}>+ Formula</button>
-        <span class="hint">In the expression, <code>x</code> is the independent variable and the remaining variables are adjustable coefficients (e.g. <code>a</code>, <code>b</code>).</span>
+<Stack gap={3}>
+    <div class="d-flex align-items-center gap-2">
+        <Button size="sm" color="outline-secondary" onclick={addFormula}>+ Formula</Button>
+        <span class="small text-secondary">
+            In the expression, <code>x</code> is the independent variable and the remaining
+            variables are adjustable coefficients (e.g. <code>a</code>, <code>b</code>).
+        </span>
     </div>
 
     {#each formulas as f, i (i)}
-        <div class="formula-card">
-            <div class="card-head">
-                <input
-                    class="name-input"
-                    type="text"
-                    value={f.name}
-                    placeholder="Formula name"
-                    oninput={(e: Event) => setField(i, { name: (e.target as HTMLInputElement).value })}
-                />
-                {#if formulas.length > 1}
-                    <button class="btn-del" title="Delete formula" onclick={() => removeFormula(i)}>×</button>
-                {/if}
-            </div>
-
-            <label class="field">
-                <span class="field-label">Expression</span>
-                <input
-                    class="expr-input"
-                    type="text"
-                    value={f.expression}
-                    placeholder="e.g. a*x^2 + b*x + c"
-                    oninput={(e: Event) => setExpression(i, (e.target as HTMLInputElement).value)}
-                />
-            </label>
-            {#if formulaError(f)}
-                <div class="error">{formulaError(f)}</div>
-            {/if}
-
-            <div class="coeff-row">
-                <span class="field-label">Coefficients</span>
-                {#if coefficientNames(f).length === 0}
-                    <span class="text-muted small">No coefficient variables in the expression</span>
-                {:else}
-                    {#each coefficientNames(f) as cname}
-                        <label class="coeff-item">
-                            <span>{cname}</span>
-                            <input
-                                type="number"
-                                step="any"
-                                value={Number.isFinite(f.coefficients[cname]) ? f.coefficients[cname] : 0}
-                                oninput={(e: Event) => setCoefficient(i, cname, (e.target as HTMLInputElement).value)}
-                            />
-                        </label>
-                    {/each}
-                {/if}
-            </div>
-
-            <div class="range-row">
-                <span class="field-label">Domain x</span>
-                <label class="range-item">
-                    <span>min</span>
+        <Card>
+            <CardBody>
+                <div class="d-flex align-items-center gap-2">
                     <input
-                        type="number"
-                        step="any"
-                        value={f.xmin}
-                        oninput={(e: Event) => setNumberField(i, "xmin", (e.target as HTMLInputElement).value)}
+                        class="form-control form-control-sm fw-semibold"
+                        type="text"
+                        value={f.name}
+                        placeholder="Formula name"
+                        oninput={(e: Event) => setField(i, { name: (e.target as HTMLInputElement).value })}
                     />
-                </label>
-                <label class="range-item">
-                    <span>max</span>
-                    <input
-                        type="number"
-                        step="any"
-                        value={f.xmax}
-                        oninput={(e: Event) => setNumberField(i, "xmax", (e.target as HTMLInputElement).value)}
-                    />
-                </label>
-                {#if f.xmin >= f.xmax}
-                    <span class="warn">min must be less than max</span>
-                {/if}
-            </div>
+                    {#if formulas.length > 1}
+                        <Button
+                            size="sm"
+                            color="link"
+                            class="text-danger px-1"
+                            title="Delete formula"
+                            onclick={() => removeFormula(i)}
+                        >×</Button>
+                    {/if}
+                </div>
 
-            <label class="field">
-                <span class="field-label">Note</span>
-                <textarea
-                    rows="2"
-                    value={f.note ?? ""}
-                    placeholder="A short explanation of the formula (optional)"
-                    oninput={(e: Event) => setField(i, { note: (e.target as HTMLTextAreaElement).value })}
-                ></textarea>
-            </label>
-        </div>
+                <div class="d-flex align-items-center gap-2 mt-2">
+                    <span class="small text-secondary text-nowrap">Expression</span>
+                    <input
+                        class="form-control form-control-sm font-monospace flex-grow-1"
+                        type="text"
+                        value={f.expression}
+                        placeholder="e.g. a*x^2 + b*x + c"
+                        oninput={(e: Event) => setExpression(i, (e.target as HTMLInputElement).value)}
+                    />
+                </div>
+                {#if formulaError(f)}
+                    <div class="text-danger small ms-4">{formulaError(f)}</div>
+                {/if}
+
+                <div class="d-flex align-items-center gap-2 flex-wrap mt-2">
+                    <span class="small text-secondary text-nowrap">Coefficients</span>
+                    {#if coefficientNames(f).length === 0}
+                        <span class="text-muted small">No coefficient variables in the expression</span>
+                    {:else}
+                        {#each coefficientNames(f) as cname}
+                            <label class="d-flex align-items-center gap-1 small">
+                                <span>{cname}</span>
+                                <input
+                                    class="form-control form-control-sm num-input"
+                                    type="number"
+                                    step="any"
+                                    value={Number.isFinite(f.coefficients[cname]) ? f.coefficients[cname] : 0}
+                                    oninput={(e: Event) => setCoefficient(i, cname, (e.target as HTMLInputElement).value)}
+                                />
+                            </label>
+                        {/each}
+                    {/if}
+                </div>
+
+                <div class="d-flex align-items-center gap-2 flex-wrap mt-2">
+                    <span class="small text-secondary text-nowrap">Domain x</span>
+                    <label class="d-flex align-items-center gap-1 small">
+                        <span>min</span>
+                        <input
+                            class="form-control form-control-sm num-input"
+                            type="number"
+                            step="any"
+                            value={f.xmin}
+                            oninput={(e: Event) => setNumberField(i, "xmin", (e.target as HTMLInputElement).value)}
+                        />
+                    </label>
+                    <label class="d-flex align-items-center gap-1 small">
+                        <span>max</span>
+                        <input
+                            class="form-control form-control-sm num-input"
+                            type="number"
+                            step="any"
+                            value={f.xmax}
+                            oninput={(e: Event) => setNumberField(i, "xmax", (e.target as HTMLInputElement).value)}
+                        />
+                    </label>
+                    {#if f.xmin >= f.xmax}
+                        <span class="text-warning small">min must be less than max</span>
+                    {/if}
+                </div>
+
+                <div class="d-flex align-items-start gap-2 mt-2">
+                    <span class="small text-secondary text-nowrap mt-1">Note</span>
+                    <textarea
+                        class="form-control form-control-sm"
+                        rows="2"
+                        value={f.note ?? ""}
+                        placeholder="A short explanation of the formula (optional)"
+                        oninput={(e: Event) => setField(i, { note: (e.target as HTMLTextAreaElement).value })}
+                    ></textarea>
+                </div>
+            </CardBody>
+        </Card>
     {/each}
 
-    <div class="preview">
-        <span class="field-label">Preview</span>
+    <Stack gap={1}>
+        <span class="small text-secondary">Preview</span>
         <FormulaPlot series={previewSeries} height={300} />
-    </div>
-</div>
+    </Stack>
+</Stack>
 
 <style>
-    #main {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-    }
-    .toolbar {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-    }
-    .hint {
-        font-size: 0.78em;
-        color: #888;
-    }
-    .hint code {
-        background: #f0f0f0;
-        padding: 0 3px;
-        border-radius: 2px;
-    }
-    .btn-sm {
-        padding: 2px 10px;
-        border: 1px solid #999;
-        border-radius: 4px;
-        background: #fff;
-        cursor: pointer;
-        font-size: 0.85em;
-    }
-    .formula-card {
-        border: 1px solid #e0e0e0;
-        border-radius: 6px;
-        padding: 10px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        background: #fafafa;
-    }
-    .card-head {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .name-input {
-        flex: 1;
-        font-weight: 600;
-        border: 1px solid #ddd;
-        border-radius: 3px;
-        padding: 3px 6px;
-    }
-    .btn-del {
-        border: none;
-        background: none;
-        color: #c00;
-        cursor: pointer;
-        font-weight: bold;
-        font-size: 1.1em;
-        padding: 0 4px;
-    }
-    .field {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .field-label {
-        font-size: 0.8em;
-        color: #666;
-        min-width: 52px;
-        flex-shrink: 0;
-    }
-    .expr-input {
-        flex: 1;
-        font-family: monospace;
-        border: 1px solid #ccc;
-        border-radius: 3px;
-        padding: 4px 6px;
-    }
-    .coeff-row,
-    .range-row {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-wrap: wrap;
-    }
-    .coeff-item,
-    .range-item {
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        font-size: 0.85em;
-    }
-    .coeff-item input {
-        width: 80px;
-    }
-    .range-item input {
-        width: 90px;
-    }
-    .coeff-item input,
-    .range-item input {
-        border: 1px solid #ccc;
-        border-radius: 3px;
-        padding: 3px 5px;
-    }
-    textarea {
-        flex: 1;
-        font-size: 0.85em;
-        border: 1px solid #ccc;
-        border-radius: 3px;
-        padding: 4px 6px;
-        resize: vertical;
-    }
-    .error {
-        color: #b00020;
-        font-size: 0.82em;
-        margin-left: 60px;
-    }
-    .warn {
-        color: #b06a00;
-        font-size: 0.8em;
-    }
-    .small {
-        font-size: 0.8em;
-    }
-    .preview {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
+    .num-input {
+        width: 5rem;
     }
 </style>

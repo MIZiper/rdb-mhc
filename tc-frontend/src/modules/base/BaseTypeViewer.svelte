@@ -1,5 +1,7 @@
 <script lang="ts">
+    import { Card, CardBody, CardTitle } from "@sveltestrap/sveltestrap";
     import type { TypeViewerProps } from "../registry";
+    import Stack from "../../components/ui/Stack.svelte";
 
     let { items }: TypeViewerProps = $props();
 
@@ -31,61 +33,22 @@
 {#if items.length === 0}
     <p class="text-muted">No items selected.</p>
 {:else}
-    <div class="item-list">
+    <Stack gap={3}>
         {#each items as item}
-            <div class="item-block">
-                <h5 class="item-title">{item.title}</h5>
-                <div class="lines">
-                    {#each formatLines(item.content) as line}
-                        <div class="line">
-                            <span class="key">{line.label}</span>
-                            <span class="sep">:</span>
-                            <span class="val">{line.value}</span>
-                        </div>
-                    {/each}
-                </div>
-            </div>
+            <Card>
+                <CardBody>
+                    <CardTitle class="h6 border-bottom pb-2 mb-2">{item.title}</CardTitle>
+                    <div class="font-monospace small">
+                        {#each formatLines(item.content) as line}
+                            <div class="d-flex gap-1">
+                                <span class="text-secondary text-nowrap">{line.label}</span>
+                                <span class="text-secondary">:</span>
+                                <span class="text-break">{line.value}</span>
+                            </div>
+                        {/each}
+                    </div>
+                </CardBody>
+            </Card>
         {/each}
-    </div>
+    </Stack>
 {/if}
-
-<style>
-    .item-list {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-    }
-    .item-block {
-        background: #fafafa;
-        border: 1px solid #e0e0e0;
-        border-radius: 6px;
-        padding: 12px;
-    }
-    .item-title {
-        margin: 0 0 8px 0;
-        font-size: 0.95em;
-        color: #333;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 6px;
-    }
-    .lines {
-        font-family: monospace;
-        font-size: 0.85em;
-        line-height: 1.5;
-    }
-    .line {
-        display: flex;
-        gap: 4px;
-    }
-    .key {
-        color: #888;
-        white-space: nowrap;
-    }
-    .sep {
-        color: #bbb;
-    }
-    .val {
-        color: #333;
-        word-break: break-all;
-    }
-</style>

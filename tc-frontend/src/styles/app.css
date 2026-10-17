@@ -1,4 +1,61 @@
 /* Base application styles. */
+html:root {
+  --bs-primary: #49a9a7;
+  --bs-primary-rgb: 73, 169, 167;
+  --bs-link-color: #2b7b79;
+  --bs-link-color-rgb: 43, 123, 121;
+  --bs-link-hover-color: #226b69;
+  --bs-link-hover-color-rgb: 34, 107, 105;
+}
+
+/* Bootstrap 5.3 compiles some primary component colors, so align them here. */
+:root .btn-primary {
+  --bs-btn-bg: var(--bs-primary);
+  --bs-btn-border-color: var(--bs-primary);
+  --bs-btn-hover-bg: color-mix(in srgb, var(--bs-primary) 85%, black);
+  --bs-btn-hover-border-color: color-mix(in srgb, var(--bs-primary) 78%, black);
+  --bs-btn-active-bg: color-mix(in srgb, var(--bs-primary) 72%, black);
+  --bs-btn-active-border-color: color-mix(in srgb, var(--bs-primary) 66%, black);
+  --bs-btn-disabled-bg: var(--bs-primary);
+  --bs-btn-disabled-border-color: var(--bs-primary);
+  --bs-btn-focus-shadow-rgb: var(--bs-primary-rgb);
+}
+
+:root .btn-outline-primary {
+  --bs-btn-color: var(--bs-primary);
+  --bs-btn-border-color: var(--bs-primary);
+  --bs-btn-hover-bg: var(--bs-primary);
+  --bs-btn-hover-border-color: var(--bs-primary);
+  --bs-btn-active-bg: var(--bs-primary);
+  --bs-btn-active-border-color: var(--bs-primary);
+  --bs-btn-disabled-color: var(--bs-primary);
+  --bs-btn-disabled-border-color: var(--bs-primary);
+  --bs-btn-focus-shadow-rgb: var(--bs-primary-rgb);
+}
+
+:root .form-check-input:checked {
+  background-color: var(--bs-primary);
+  border-color: var(--bs-primary);
+}
+
+:root .form-control:focus,
+:root .form-select:focus,
+:root .form-check-input:focus {
+  border-color: var(--bs-primary);
+  box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+:root .pagination {
+  --bs-pagination-active-bg: var(--bs-primary);
+  --bs-pagination-active-border-color: var(--bs-primary);
+  --bs-pagination-focus-box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+:root .progress,
+:root .progress-stacked {
+  --bs-progress-bar-bg: var(--bs-primary);
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;

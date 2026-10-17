@@ -10,11 +10,13 @@
         totalPages,
         onchange,
         range = 3,
+        class: className = "",
     }: {
         page: number;
         totalPages: number;
         onchange: (page: number) => void;
         range?: number;
+        class?: string;
     } = $props();
 
     let pageNumbers = $derived.by(() => {
@@ -32,7 +34,7 @@
 </script>
 
 {#if totalPages > 1}
-    <Pagination>
+    <Pagination class={className}>
         <PaginationItem disabled={page <= 1}>
             <PaginationLink first onclick={() => go(1)} />
         </PaginationItem>

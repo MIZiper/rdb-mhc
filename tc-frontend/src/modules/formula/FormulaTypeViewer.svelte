@@ -1,5 +1,12 @@
 <script lang="ts">
-    import { Col, Row } from "@sveltestrap/sveltestrap";
+    import {
+        Button,
+        Card,
+        CardBody,
+        CardHeader,
+        Col,
+        Row,
+    } from "@sveltestrap/sveltestrap";
     import type { TypeViewerProps } from "../registry";
     import { parseFormulaContent, sampleCurve, type FormulaDef } from "../../lib/utils/formula";
     import FormulaPlot from "../../components/FormulaPlot.svelte";
@@ -68,26 +75,33 @@
 {#if parsedItems.length === 0}
     <p class="text-muted">No valid Formula data in selected items.</p>
 {:else}
-    <Row>
+    <Row class="g-3">
         <Col xs="3">
-            <div class="sidebar">
-                <h6>Formula selection</h6>
-                <div class="toggle-row">
-                    <button class="mini" onclick={() => (selected = new Set(entries.map((e) => e.key)))}>Select all</button>
-                    <button class="mini" onclick={() => (selected = new Set())}>Clear</button>
-                </div>
-                <div class="checkbox-list">
-                    {#each entries as e (e.key)}
-                        <label class="check-item">
-                            <input type="checkbox" checked={selected.has(e.key)} onchange={() => toggle(e.key)} />
-                            <span>
-                                <span class="item-title">{e.itemTitle}</span>
-                                <span class="formula-name">{e.formula.name}</span>
-                            </span>
-                        </label>
-                    {/each}
-                </div>
-            </div>
+            <Card>
+                <CardHeader class="py-2 fw-semibold">Formula selection</CardHeader>
+                <CardBody class="pt-2">
+                    <div class="d-flex gap-2 mb-2">
+                        <Button size="sm" color="outline-secondary" onclick={() => (selected = new Set(entries.map((e) => e.key)))}>Select all</Button>
+                        <Button size="sm" color="outline-secondary" onclick={() => (selected = new Set())}>Clear</Button>
+                    </div>
+                    <div class="checkbox-list">
+                        {#each entries as e (e.key)}
+                            <label class="form-check mb-1">
+                                <input
+                                    class="form-check-input mt-1"
+                                    type="checkbox"
+                                    checked={selected.has(e.key)}
+                                    onchange={() => toggle(e.key)}
+                                />
+                                <span class="form-check-label">
+                                    <span class="d-block fw-medium">{e.itemTitle}</span>
+                                    <span class="d-block small text-secondary">{e.formula.name}</span>
+                                </span>
+                            </label>
+                        {/each}
+                    </div>
+                </CardBody>
+            </Card>
         </Col>
         <Col xs="9">
             <div class="main-area">
@@ -102,58 +116,9 @@
 {/if}
 
 <style>
-    .sidebar {
-        background: #f7f7f8;
-        border-radius: 6px;
-        padding: 12px;
-    }
-    .sidebar h6 {
-        margin-top: 0;
-        margin-bottom: 8px;
-        font-size: 0.85em;
-        color: #555;
-        border-bottom: 1px solid #ddd;
-        padding-bottom: 4px;
-    }
-    .toggle-row {
-        display: flex;
-        gap: 6px;
-        margin-bottom: 8px;
-    }
-    .mini {
-        border: 1px solid #ccc;
-        border-radius: 3px;
-        background: #fff;
-        cursor: pointer;
-        font-size: 0.78em;
-        padding: 1px 8px;
-    }
     .checkbox-list {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
         max-height: 60vh;
         overflow-y: auto;
-    }
-    .check-item {
-        font-size: 0.85em;
-        cursor: pointer;
-        display: flex;
-        align-items: flex-start;
-        gap: 6px;
-    }
-    .check-item input {
-        margin-top: 2px;
-        flex-shrink: 0;
-    }
-    .item-title {
-        display: block;
-        font-weight: 500;
-    }
-    .formula-name {
-        display: block;
-        color: #888;
-        font-size: 0.9em;
     }
     .main-area {
         min-height: 200px;

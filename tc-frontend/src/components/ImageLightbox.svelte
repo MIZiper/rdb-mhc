@@ -67,7 +67,7 @@
     .overlay {
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.82);
+        background: rgba(var(--bs-black-rgb), 0.82);
         z-index: 2000;
         display: flex;
         align-items: center;
@@ -81,7 +81,7 @@
         max-height: 92vh;
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 0.5rem;
         cursor: default;
     }
     :global(.full-image) {
@@ -89,15 +89,15 @@
         max-height: 80vh;
         object-fit: contain;
         margin: 0 auto;
-        border-radius: 4px;
-        background: #111;
+        border-radius: var(--bs-border-radius);
+        background: var(--bs-black);
     }
     .bar {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 16px;
-        color: #f5f5f5;
+        color: var(--bs-white);
         font-size: 0.9em;
     }
     .caption {
@@ -106,13 +106,13 @@
     }
     .item-title {
         font-size: 0.8em;
-        color: #9fd7d5;
+        color: var(--bs-primary);
     }
     .cap-text {
-        color: #eee;
+        color: var(--bs-white);
     }
     .counter {
-        color: #bbb;
+        color: var(--bs-secondary-color);
         white-space: nowrap;
     }
     .close {
@@ -121,7 +121,7 @@
         right: 0;
         border: none;
         background: none;
-        color: #fff;
+        color: var(--bs-white);
         font-size: 2em;
         line-height: 1;
         cursor: pointer;
@@ -132,17 +132,17 @@
         top: 50%;
         transform: translateY(-50%);
         border: none;
-        background: rgba(255, 255, 255, 0.12);
-        color: #fff;
+        background: rgba(var(--bs-white-rgb), 0.12);
+        color: var(--bs-white);
         font-size: 2.4em;
         line-height: 1;
         width: 48px;
         height: 72px;
         cursor: pointer;
-        border-radius: 6px;
+        border-radius: var(--bs-border-radius-lg);
     }
     .nav:hover {
-        background: rgba(255, 255, 255, 0.25);
+        background: rgba(var(--bs-white-rgb), 0.25);
     }
     .prev {
         left: -60px;
