@@ -12,6 +12,7 @@
         Spinner,
     } from "@sveltestrap/sveltestrap";
     import { getContext, onMount } from "svelte";
+    import { searchParams } from "sv-router";
     import { TagsSelector, type TagMeta } from "@mizip/metahub";
     import ResourceItem from "../components/ResourceItem.svelte";
     import Pagination from "../components/Pagination.svelte";
@@ -19,7 +20,19 @@
     import { fetchTagsInfo, constructTagsById } from "../lib/api/metahub";
     import { fetchFieldKeys, fetchTypes, queryNodes } from "../lib/api";
     import type { FieldKey, TypeDescriptor } from "../types";
+    import {
+        boolParam,
+        canonicalSearch,
+        encodeCsv,
+        encodeFilters,
+        encodeIdCsv,
+        parseCsv,
+        parseFilters,
+        parseIdCsv,
+        stringParam,
+    } from "../lib/utils/url";
 
+    let router: any = getContext("router");
     let metahub_host = (getContext("mh_host") as string) || "";
 
     let types: TypeDescriptor[] = $state([]);
@@ -43,9 +56,28 @@
     let page = $state(1);
     let totalPages = $derived(Math.max(1, Math.ceil(total / pageSize)));
 
+    let ready = $state(false);
+    let lastApplied: string | null = null;
+    let applyToken = 0;
+    let runToken = 0;
+
     onMount(async () => {
-        types = await fetchTypes();
-        fieldKeys = await fetchFieldKeys();
+        const [typeList, keys] = await Promise.all([
+            fetchTypes(),
+            fetchFieldKeys(),
+        ]);
+        types = typeList;
+        fieldKeys = keys;
+        ready = true;
+    });
+
+    $effect(() => {
+        if (!ready) return;
+        const raw = searchParams.toString();
+        const canonical = canonicalSearch(raw);
+        if (canonical === lastApplied) return;
+        lastApplied = canonical;
+        void applyUrl(raw);
     });
 
     function opOptions(kind: string | undefined): string[] {
@@ -74,8 +106,112 @@
         tagSelectorOpen = false;
     }
 
-    async function run(resetPage = true) {
-        if (resetPage) page = 1;
+    async function applyUrl(raw: string) {
+        const token = ++applyToken;
+        runToken += 1;
+        loading = false;
+        const params = new URLSearchParams(raw);
+        const textValue = stringParam(params, "q") ?? "";
+        const typeValues = parseCsv(stringParam(params, "types"));
+        const tagIds = parseIdCsv(stringParam(params, "tags"));
+        const statusValue = stringParam(params, "status") ?? "";
+        const tagMode = stringParam(params, "tag_mode");
+        const pageValue = Math.max(
+            1,
+            Number(stringParam(params, "page") ?? "1") || 1,
+        );
+        const parsedFilters = parseFilters(stringParam(params, "filters"));
+
+        const selected: Record<string, boolean> = {};
+        for (const type of typeValues) selected[type] = true;
+
+        const hydratedFilters = parsedFilters.map((filter) => {
+            const kind = fieldKeys.find((key) => key.key === filter.key)?.kind;
+            const allowed = opOptions(kind);
+            return {
+                key: filter.key,
+                op: allowed.includes(filter.op) ? filter.op : (allowed[0] ?? "eq"),
+                value: filter.value,
+            };
+        });
+
+        text = textValue;
+        selectedTypes = selected;
+        selectedTags = tagIds.map((id) => ({ id, name: `@${id}` }));
+        includeSubTags = tagMode !== "exact";
+        status = statusValue;
+        filters = hydratedFilters;
+        page = pageValue;
+
+        if (tagIds.length > 0) {
+            const cache = await fetchTagsInfo(metahub_host, tagIds);
+            if (token !== applyToken) return;
+            selectedTags = constructTagsById(tagIds, cache);
+        }
+        if (token !== applyToken) return;
+
+        const hasCondition =
+            textValue.trim() !== "" ||
+            typeValues.length > 0 ||
+            tagIds.length > 0 ||
+            statusValue !== "" ||
+            parsedFilters.length > 0 ||
+            pageValue > 1;
+        const shouldRun =
+            hasCondition || boolParam(stringParam(params, "run"));
+
+        if (shouldRun) {
+            await execute();
+        } else {
+            hasSearched = false;
+            items = [];
+            total = 0;
+            error = null;
+        }
+    }
+
+    function buildQueryUrl(): string {
+        const params = new URLSearchParams();
+        const query = text.trim();
+        if (query) params.set("q", query);
+
+        const typeCsv = encodeCsv(
+            Object.keys(selectedTypes).filter((key) => selectedTypes[key]),
+        );
+        if (typeCsv) params.set("types", typeCsv);
+
+        const tagCsv = encodeIdCsv(
+            selectedTags
+                .map((tag) => tag.id)
+                .filter((id): id is number => typeof id === "number"),
+        );
+        if (tagCsv) {
+            params.set("tags", tagCsv);
+            if (!includeSubTags) params.set("tag_mode", "exact");
+        }
+
+        if (status) params.set("status", status);
+
+        const filterValue = encodeFilters(
+            filters.filter((filter) => filter.key && filter.value !== ""),
+        );
+        if (filterValue) params.set("filters", filterValue);
+
+        if (page > 1) params.set("page", String(page));
+        if (params.size === 0) params.set("run", "1");
+        return params.toString();
+    }
+
+    function syncUrl() {
+        const search = buildQueryUrl();
+        const canonical = canonicalSearch(search);
+        if (canonical === lastApplied) return;
+        lastApplied = canonical;
+        router.navigate("/query", { search, scrollToTop: false });
+    }
+
+    async function execute() {
+        const token = ++runToken;
         loading = true;
         error = null;
         hasSearched = true;
@@ -106,6 +242,7 @@
                 ...new Set(data.items.flatMap((it: any) => it.tag_ids)),
             ] as number[];
             const cache = await fetchTagsInfo(metahub_host, uniqueTagIds);
+            if (token !== runToken) return;
 
             items = data.items.map((e: any) => ({
                 id: e.id,
@@ -122,16 +259,23 @@
             }));
             total = data.total || 0;
         } catch (e: any) {
-            error = e.message || "Query failed";
+            if (token === runToken) error = e.message || "Query failed";
         } finally {
-            loading = false;
+            if (token === runToken) loading = false;
         }
     }
 
-    function goto(p: number) {
+    async function searchNow() {
+        page = 1;
+        syncUrl();
+        await execute();
+    }
+
+    async function goto(p: number) {
         if (p < 1 || p > totalPages) return;
         page = p;
-        run(false);
+        syncUrl();
+        await execute();
     }
 </script>
 
@@ -144,7 +288,7 @@
                 type="search"
                 placeholder="Full-text (title, description, content)"
                 bind:value={text}
-                onkeypress={(e) => e.key === "Enter" && run()}
+                onkeypress={(e) => e.key === "Enter" && searchNow()}
             />
         </Col>
         <Col md="3">
@@ -157,7 +301,7 @@
             </Input>
         </Col>
         <Col md="3">
-            <Button color="primary" onclick={() => run()}>Search</Button>
+            <Button color="primary" onclick={searchNow}>Search</Button>
         </Col>
     </Row>
 
@@ -241,7 +385,7 @@
                                 class="form-control form-control-sm flex-grow-1"
                                 bind:value={f.value}
                                 placeholder="value"
-                                onkeypress={(e) => e.key === "Enter" && run()}
+                                onkeypress={(e) => e.key === "Enter" && searchNow()}
                             />
                             <Button
                                 size="sm"

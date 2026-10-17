@@ -1,6 +1,8 @@
 <script lang="ts">
     import { Button, Table } from "@sveltestrap/sveltestrap";
     import Stack from "../../components/ui/Stack.svelte";
+    import { untrack } from "svelte";
+    import type { EditorProps } from "../registry";
 
     interface ChannelDef {
         name: string
@@ -12,18 +14,118 @@
         time: number
     }
 
-    let rows: RowDef[] = $state([
-        { id_idx: "r0", time: 0 },
-        { id_idx: "r1", time: 1 },
-    ])
-    let columns: ChannelDef[] = $state([
-        { name: "Channel A", id_name: "channel_a" },
-        { name: "Channel B", id_name: "channel_b" },
-    ])
-    let values: (number | null)[][] = $state([
-        [null, null],
-        [null, null],
-    ])
+    interface RawRow {
+        id_idx?: string | null
+        time?: number | string | null
+        value?: number | string | null
+    }
+
+    interface RawChannel {
+        name?: string | null
+        id_name?: string | null
+        data?: RawRow[] | null
+    }
+
+    interface InitialState {
+        rows: RowDef[]
+        columns: ChannelDef[]
+        values: (number | null)[][]
+    }
+
+    function toNumber(value: unknown): number | null {
+        if (typeof value === "number") return Number.isFinite(value) ? value : null;
+        if (typeof value === "string" && value.trim() !== "") {
+            const parsed = Number(value);
+            return Number.isFinite(parsed) ? parsed : null;
+        }
+        return null;
+    }
+
+    function idValue(value: unknown): string {
+        if (typeof value === "string") return value.trim();
+        if (typeof value === "number" && Number.isFinite(value)) return String(value);
+        return "";
+    }
+
+    function rowKey(raw: RawRow, channelIndex: number, rowIndex: number): string {
+        const id = idValue(raw?.id_idx);
+        const time = toNumber(raw?.time);
+        if (id) return time !== null ? `id:${id}:time:${time}` : `id:${id}`;
+        if (time !== null) return `time:${time}`;
+        return `idx:${channelIndex}:${rowIndex}`;
+    }
+
+    function loadInitial(initial: Record<string, any> | null | undefined): InitialState {
+        const rawChannels: RawChannel[] = Array.isArray(initial?.channels)
+            ? initial.channels
+            : [];
+
+        if (rawChannels.length === 0) {
+            return {
+                rows: [
+                    { id_idx: "r0", time: 0 },
+                    { id_idx: "r1", time: 1 },
+                ],
+                columns: [
+                    { name: "Channel A", id_name: "channel_a" },
+                    { name: "Channel B", id_name: "channel_b" },
+                ],
+                values: [
+                    [null, null],
+                    [null, null],
+                ],
+            };
+        }
+
+        const columns: ChannelDef[] = rawChannels.map((ch, i) => ({
+            name: typeof ch?.name === "string" && ch.name ? ch.name : `Channel ${i + 1}`,
+            id_name: typeof ch?.id_name === "string" ? ch.id_name : "",
+        }));
+
+        const rows: RowDef[] = [];
+        const rowIndex = new Map<string, number>();
+
+        rawChannels.forEach((ch, ci) => {
+            const data: RawRow[] = Array.isArray(ch?.data) ? ch.data : [];
+            data.forEach((raw, ri) => {
+                const key = rowKey(raw, ci, ri);
+                if (!rowIndex.has(key)) {
+                    rowIndex.set(key, rows.length);
+                    rows.push({
+                        id_idx: idValue(raw?.id_idx),
+                        time: toNumber(raw?.time) ?? 0,
+                    });
+                }
+            });
+        });
+
+        if (rows.length === 0) {
+            rows.push({ id_idx: "r0", time: 0 }, { id_idx: "r1", time: 1 });
+        }
+
+        const values: (number | null)[][] = columns.map(() =>
+            Array(rows.length).fill(null),
+        );
+
+        rawChannels.forEach((ch, ci) => {
+            const data: RawRow[] = Array.isArray(ch?.data) ? ch.data : [];
+            data.forEach((raw, ri) => {
+                const idx = rowIndex.get(rowKey(raw, ci, ri));
+                if (idx !== undefined) {
+                    values[ci][idx] = toNumber(raw?.value);
+                }
+            });
+        });
+
+        return { rows, columns, values };
+    }
+
+    let { initial }: EditorProps = $props();
+    const initialState = loadInitial(untrack(() => initial));
+
+    let rows: RowDef[] = $state(initialState.rows)
+    let columns: ChannelDef[] = $state(initialState.columns)
+    let values: (number | null)[][] = $state(initialState.values)
 
     $effect(() => {
         while (values.length < columns.length) {

@@ -1,8 +1,20 @@
 <script lang="ts">
     import { Button, Input } from "@sveltestrap/sveltestrap";
     import Stack from "../../components/ui/Stack.svelte";
+    import { untrack } from "svelte";
+    import type { EditorProps } from "../registry";
 
-    let jsonText: string = $state("{}");
+    let { initial }: EditorProps = $props();
+
+    function formatInitial(value: Record<string, any> | null | undefined): string {
+        try {
+            return JSON.stringify(value ?? {}, null, 2);
+        } catch {
+            return "{}";
+        }
+    }
+
+    let jsonText: string = $state(formatInitial(untrack(() => initial)));
     let error: string | null = $state(null);
 
     export function getContent() {
