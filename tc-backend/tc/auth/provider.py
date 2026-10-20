@@ -24,12 +24,16 @@ security = HTTPBearer(auto_error=False)
 
 
 def is_configured() -> bool:
-    return bool(settings.kc_server_url and settings.kc_realm and settings.kc_client_id)
+    return bool(
+        settings.keycloak_url
+        and settings.keycloak_realm
+        and settings.keycloak_client_id
+    )
 
 
 def _certs_url() -> str:
-    server = settings.kc_server_url.rstrip("/")
-    return f"{server}/realms/{settings.kc_realm}/protocol/openid-connect/certs"
+    server = settings.keycloak_url.rstrip("/")
+    return f"{server}/realms/{settings.keycloak_realm}/protocol/openid-connect/certs"
 
 
 async def _fetch_jwks() -> list[dict]:
@@ -77,7 +81,7 @@ async def _decode_token(token: str) -> dict[str, Any]:
             token,
             key,
             algorithms=[header.get("alg", "RS256")],
-            issuer=settings.kc_issuer,
+            issuer=settings.keycloak_issuer,
             options={"verify_exp": True, "verify_aud": False, "verify_iss": True},
         )
     except JWTError:
@@ -104,7 +108,9 @@ async def get_current_user(
         )
 
     client_roles = (
-        payload.get("resource_access", {}).get(settings.kc_client_id, {}).get("roles", [])
+        payload.get("resource_access", {})
+        .get(settings.keycloak_client_id, {})
+        .get("roles", [])
     )
     realm_roles = payload.get("realm_access", {}).get("roles", [])
     roles = list({*client_roles, *realm_roles})

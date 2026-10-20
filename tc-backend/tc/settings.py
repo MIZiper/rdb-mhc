@@ -31,10 +31,10 @@ class Settings:
     postgres_port: int
 
     # Keycloak
-    kc_server_url: str
-    kc_server_url_public: str
-    kc_realm: str
-    kc_client_id: str
+    keycloak_url: str
+    keycloak_url_public: str
+    keycloak_realm: str
+    keycloak_client_id: str
 
     # MetaHub
     metahub_host: str
@@ -47,9 +47,9 @@ class Settings:
     frontend_dist: Optional[str]
 
     @property
-    def kc_issuer(self) -> str:
-        if self.kc_server_url_public and self.kc_realm:
-            return f"{self.kc_server_url_public.rstrip('/')}/realms/{self.kc_realm}"
+    def keycloak_issuer(self) -> str:
+        if self.keycloak_url_public and self.keycloak_realm:
+            return f"{self.keycloak_url_public.rstrip('/')}/realms/{self.keycloak_realm}"
         return ""
 
     @property
@@ -58,17 +58,17 @@ class Settings:
 
 
 def load_settings() -> Settings:
-    kc_server = os.getenv("KC_SERVER_URL", "")
+    keycloak_url = os.getenv("KEYCLOAK_URL", "")
     return Settings(
         postgres_user=os.getenv("POSTGRES_USER", "postgres"),
         postgres_password=os.getenv("POSTGRES_PASSWORD", "password"),
         postgres_db=os.getenv("POSTGRES_DB", "tc"),
         postgres_host=os.getenv("POSTGRES_HOST", "localhost"),
         postgres_port=_int_env("POSTGRES_PORT", 5432),
-        kc_server_url=kc_server,
-        kc_server_url_public=os.getenv("KC_SERVER_URL_PUBLIC", "") or kc_server,
-        kc_realm=os.getenv("KC_REALM", ""),
-        kc_client_id=os.getenv("KC_CLIENT_ID", ""),
+        keycloak_url=keycloak_url,
+        keycloak_url_public=os.getenv("KEYCLOAK_URL_PUBLIC", "") or keycloak_url,
+        keycloak_realm=os.getenv("KEYCLOAK_REALM", ""),
+        keycloak_client_id=os.getenv("KEYCLOAK_CLIENT_ID", ""),
         metahub_host=os.getenv("TC_METAHUB", "localhost:8033"),
         storage_root=os.getenv("TC_STORAGE_ROOT", "./storage"),
         max_upload_mb=_int_env("TC_MAX_UPLOAD_MB", 25),

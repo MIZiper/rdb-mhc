@@ -32,8 +32,9 @@ tc/
 
 - `TC_METAHUB` — MetaHub service host (default: `localhost:8033`)
 - `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` / `POSTGRES_HOST` / `POSTGRES_PORT`
-- `KC_SERVER_URL` / `KC_SERVER_URL_PUBLIC` / `KC_REALM` / `KC_CLIENT_ID` — Keycloak
-  (`KC_SERVER_URL_PUBLIC` is the browser-reachable URL used as the token issuer)
+- `KEYCLOAK_URL` / `KEYCLOAK_URL_PUBLIC` / `KEYCLOAK_REALM` / `KEYCLOAK_CLIENT_ID` — Keycloak
+  (`KEYCLOAK_URL_PUBLIC` is the browser-reachable URL used as the token issuer;
+  local development uses realm `master` and client `miz`)
 - `TC_STORAGE_ROOT` — directory for uploaded file bytes (default: `./storage`)
 - `TC_MAX_UPLOAD_MB` — maximum upload size in MB (default: `25`)
 - `FRONTEND_DIST` — when set to a directory, serve it as the SPA at `/`
@@ -80,7 +81,7 @@ via `ui.component`.
 ## Role-based access control
 
 All authorization is driven by Keycloak roles. The backend reads roles from
-both **Realm roles** and **Client roles** under `resource_access.{KC_CLIENT_ID}`,
+both **Realm roles** and **Client roles** under `resource_access.{KEYCLOAK_CLIENT_ID}`,
 merging them into a single set.
 
 ### Built-in action roles
