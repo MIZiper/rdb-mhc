@@ -10,7 +10,7 @@ from typing import Optional
 from uuid import UUID
 
 import asyncpg
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from asyncpg.connection import Connection
 
 from tc.auth.permissions import (
@@ -41,7 +41,9 @@ router = APIRouter(prefix="/nodes")
 
 _SELECT = f"SELECT {NODE_META_COLUMNS} FROM nodes n"
 _RETURNING = """RETURNING id, title, description, updated_at, content_type,
-                creator_name, creator_sub, status, visibility"""
+                creator_name, creator_sub, status, visibility,
+                source_system, source_id, source_part, source_url,
+                source_linked_at, source_linked_by"""
 
 
 def _can_see_row(row, user: Optional[dict]) -> bool:
@@ -225,12 +227,17 @@ async def update_node_meta(
         raise HTTPException(status_code=404, detail="Node not found")
     check_edit_node(user, existing.get("creator_sub"))
 
+    if node.status is not None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Use PATCH /api/nodes/{id}/state to change status",
+        )
+
     sets: list[str] = []
     args: list = []
     for field, value in (
         ("title", node.title),
         ("description", node.description),
-        ("status", node.status),
         ("visibility", node.visibility),
     ):
         if value is not None:

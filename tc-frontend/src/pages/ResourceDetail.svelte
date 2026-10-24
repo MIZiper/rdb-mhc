@@ -52,6 +52,11 @@
     let contentSaving = $state(false);
     let contentError = $state("");
 
+    const STATUS_OPTIONS = ["draft", "pending_review", "published", "archived"];
+    let selectedStatus = $state("draft");
+    let statusSaving = $state(false);
+    let statusError = $state("");
+
     function checkCanEdit(): boolean {
         if (hasRole("nodes:edit_any")) return true;
         if (!item) return false;
@@ -80,7 +85,12 @@
             creator_sub: data.creator_sub,
             status: data.status,
             visibility: data.visibility || "public",
+            source_system: data.source_system ?? null,
+            source_id: data.source_id ?? null,
+            source_part: data.source_part ?? null,
+            source_url: data.source_url ?? null,
         };
+        selectedStatus = data.status;
 
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get("edit") === "1" && checkCanEdit()) {
@@ -149,6 +159,30 @@
             contentError = e.message;
         } finally {
             contentSaving = false;
+        }
+    }
+
+    async function saveStatus() {
+        if (!item) return;
+        statusSaving = true;
+        statusError = "";
+        try {
+            const res = await authFetch(`/api/nodes/${item_id}/state`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: selectedStatus }),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                statusError = err.detail || "Failed to update status";
+                return;
+            }
+            const data = await res.json();
+            item = { ...item, status: data.status, update_time: new Date(data.updated_at) };
+        } catch (e: any) {
+            statusError = e.message;
+        } finally {
+            statusSaving = false;
         }
     }
 
@@ -335,8 +369,36 @@
                                 <dt class="col-4 fw-normal text-secondary">Type</dt>
                                 <dd class="col-8 mb-2">{item.data_type || "—"}</dd>
                                 <dt class="col-4 fw-normal text-secondary">Visibility</dt>
-                                <dd class="col-8 mb-0">{item.visibility}</dd>
+                                <dd class="col-8 mb-2">{item.visibility}</dd>
+                                {#if item.source_url}
+                                    <dt class="col-4 fw-normal text-secondary">Source</dt>
+                                    <dd class="col-8 mb-0">
+                                        <a href={item.source_url} target="_blank" rel="noreferrer">
+                                            {item.source_system || "external"}{item.source_part ? ` / ${item.source_part}` : ""}
+                                        </a>
+                                    </dd>
+                                {/if}
                             </dl>
+                            {#if hasRole("nodes:review")}
+                                <Label class="mt-3">Status</Label>
+                                <Input type="select" bind:value={selectedStatus}>
+                                    {#each STATUS_OPTIONS as option}
+                                        <option value={option}>{option}</option>
+                                    {/each}
+                                </Input>
+                                {#if statusError}
+                                    <div class="text-danger small mt-1">{statusError}</div>
+                                {/if}
+                                <Button
+                                    color="outline-secondary"
+                                    size="sm"
+                                    class="mt-2"
+                                    disabled={statusSaving}
+                                    onclick={saveStatus}
+                                >
+                                    {statusSaving ? "Saving..." : "Update status"}
+                                </Button>
+                            {/if}
                         </CardBody>
                     </Card>
                 {/if}

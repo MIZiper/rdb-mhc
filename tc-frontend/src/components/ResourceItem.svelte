@@ -82,6 +82,11 @@
                 <span>·</span>
             {/if}
             <span>{item.update_time.toLocaleDateString()}</span>
+            {#if item.source_url}
+                <a class="link-secondary text-decoration-none" href={item.source_url} target="_blank" rel="noreferrer">
+                    Source
+                </a>
+            {/if}
             {#if canEdit}
                 <a class="link-primary text-decoration-none" href="/items/{item.id}?edit=1">
                     Edit

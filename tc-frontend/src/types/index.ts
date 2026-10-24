@@ -14,6 +14,10 @@ export interface ItemMeta {
     creator_sub: string | null;
     status: string;
     visibility: string;
+    source_system?: string | null;
+    source_id?: string | null;
+    source_part?: string | null;
+    source_url?: string | null;
     /** Projected preview fields (keyed by canonical field key). */
     fields?: Record<string, unknown>;
 }

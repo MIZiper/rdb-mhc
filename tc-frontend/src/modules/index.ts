@@ -26,6 +26,15 @@ export function registerProcessors(): void {
     registry.register(
         new BaseProcessor("Image.v00", "Image Gallery", ImageViewer, ImageEditor, ImageTypeViewer),
     );
+    for (const [type, name] of [
+        ["dac_web.project", "DAC Web Project"],
+        ["tpl.plan", "TPL Plan"],
+        ["tpl.log", "TPL Execution Log"],
+    ] as const) {
+        registry.register(
+            new BaseProcessor(type, name, BaseViewer, BaseEditor, BaseTypeViewer),
+        );
+    }
 }
 
 registerProcessors();

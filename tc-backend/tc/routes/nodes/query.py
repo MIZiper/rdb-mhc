@@ -89,6 +89,10 @@ async def _attach_meta(conn: Connection, rows) -> list[dict]:
             "creator_sub": r["creator_sub"],
             "status": r["status"],
             "visibility": r["visibility"],
+            "source_system": r.get("source_system"),
+            "source_id": r.get("source_id"),
+            "source_part": r.get("source_part"),
+            "source_url": r.get("source_url"),
             "fields": fields_map.get(r["id"], {}),
         }
         for r in rows
@@ -120,7 +124,8 @@ async def query_nodes(
     offset_idx = add((body.page - 1) * body.page_size)
     rows = await conn.fetch(
         f"""SELECT n.id, n.title, n.description, n.updated_at, n.content_type,
-                   n.creator_name, n.creator_sub, n.status, n.visibility
+                   n.creator_name, n.creator_sub, n.status, n.visibility,
+                   n.source_system, n.source_id, n.source_part, n.source_url
             FROM nodes n{where_sql}
             ORDER BY n.updated_at DESC
             LIMIT ${limit_idx} OFFSET ${offset_idx}""",
@@ -328,7 +333,8 @@ async def batch_node_data(
 
     rows = await conn.fetch(
         """SELECT id, title, description, content, content_type, updated_at,
-                  creator_name, creator_sub, status, visibility
+                  creator_name, creator_sub, status, visibility,
+                  source_system, source_id, source_part, source_url
            FROM nodes WHERE id = ANY($1)""",
         node_ids,
     )
@@ -363,6 +369,10 @@ async def batch_node_data(
                 "creator_sub": r["creator_sub"],
                 "status": r["status"],
                 "visibility": r["visibility"],
+                "source_system": r.get("source_system"),
+                "source_id": r.get("source_id"),
+                "source_part": r.get("source_part"),
+                "source_url": r.get("source_url"),
             }
             for r in visible
         ]

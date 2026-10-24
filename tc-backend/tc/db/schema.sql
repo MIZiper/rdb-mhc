@@ -36,6 +36,13 @@ CREATE TABLE IF NOT EXISTS nodes (
     frozenlink     VARCHAR(255),
     frozen         BOOLEAN NOT NULL DEFAULT FALSE,
     validate_key   VARCHAR(20) DEFAULT NULL,
+    -- source resource represented by this catalog node
+    source_system      VARCHAR(50),
+    source_id          VARCHAR(255),
+    source_part        VARCHAR(50),
+    source_url         TEXT,
+    source_linked_at   TIMESTAMP,
+    source_linked_by   VARCHAR(255),
     -- full-text search over title + description
     search_vector  TSVECTOR GENERATED ALWAYS AS (
         to_tsvector('english', coalesce(title, '') || ' ' || coalesce(description, ''))
@@ -43,7 +50,19 @@ CREATE TABLE IF NOT EXISTS nodes (
 );
 -- status values: draft, pending_review, published, archived
 
+-- Migration for databases created before source links existed.
+ALTER TABLE nodes ADD COLUMN IF NOT EXISTS source_system VARCHAR(50);
+ALTER TABLE nodes ADD COLUMN IF NOT EXISTS source_id VARCHAR(255);
+ALTER TABLE nodes ADD COLUMN IF NOT EXISTS source_part VARCHAR(50);
+ALTER TABLE nodes ADD COLUMN IF NOT EXISTS source_url TEXT;
+ALTER TABLE nodes ADD COLUMN IF NOT EXISTS source_linked_at TIMESTAMP;
+ALTER TABLE nodes ADD COLUMN IF NOT EXISTS source_linked_by VARCHAR(255);
+
 CREATE INDEX IF NOT EXISTS idx_nodes_search_vector ON nodes USING GIN (search_vector);
+CREATE INDEX IF NOT EXISTS idx_nodes_source ON nodes(source_system, source_id, source_part);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_nodes_source_unique
+    ON nodes(source_system, source_id, source_part)
+    WHERE source_system IS NOT NULL AND source_id IS NOT NULL AND source_part IS NOT NULL;
 
 DROP TRIGGER IF EXISTS node_updated_at_trigger ON nodes;
 CREATE TRIGGER node_updated_at_trigger

@@ -41,6 +41,17 @@ tc/
 
 The schema is applied automatically on startup (`db/schema.sql`, idempotent).
 
+### External source links
+
+Nodes may represent metadata-only resources owned by another application. The source application creates the TC node first, then attaches itself through:
+
+- `GET /api/nodes/{id}/state`
+- `PATCH /api/nodes/{id}/state` (`nodes:review`)
+- `GET/PUT/DELETE /api/nodes/{id}/source`
+
+`source_system`, `source_id`, `source_part` and `source_url` are stored on the node; the unique source tuple prevents two TC nodes from representing the same app resource part. Status remains TC-owned; applications map statuses to their own frozen set. `dac_web.project`, `tpl.plan` and `tpl.log` are metadata-only built-in types;
+they are intended to be created in TC by the user, then linked from the source app.
+
 ---
 
 ## Stored files

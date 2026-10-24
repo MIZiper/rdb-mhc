@@ -20,6 +20,35 @@ class NodeMetaRead(BaseModel):
     creator_sub: Optional[str] = None
     status: str = Field("draft", description="draft | pending_review | published | archived")
     visibility: str = Field("public", description="Visibility label")
+    source_system: Optional[str] = None
+    source_id: Optional[str] = None
+    source_part: Optional[str] = None
+    source_url: Optional[str] = None
+    source_linked_at: Optional[datetime] = None
+    source_linked_by: Optional[str] = None
+
+
+class NodeStateRead(BaseModel):
+    id: UUID
+    title: str
+    description: Optional[str] = None
+    data_type: Optional[str] = None
+    status: str
+    updated_at: datetime
+    tag_ids: list[int] = Field(default_factory=list)
+    source_system: Optional[str] = None
+    source_id: Optional[str] = None
+    source_part: Optional[str] = None
+    source_url: Optional[str] = None
+    source_linked_at: Optional[datetime] = None
+    source_linked_by: Optional[str] = None
+
+
+class NodeSourceUpdate(BaseModel):
+    source_system: str = Field(..., min_length=1, max_length=50)
+    source_id: str = Field(..., min_length=1, max_length=255)
+    source_part: str = Field(..., min_length=1, max_length=50)
+    source_url: str = Field(..., min_length=1)
 
 
 class NodeMetaList(BaseModel):

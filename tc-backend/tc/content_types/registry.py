@@ -84,8 +84,43 @@ IMAGE = TypeDescriptor(
 )
 
 
+# --- External catalog entries -------------------------------------------
+# These types are metadata-only: the source application keeps the content,
+# while TC stores title/description/tags/status and a link back to the source.
+DAC_WEB_PROJECT = TypeDescriptor(
+    type="dac_web.project",
+    display_name="DAC Web Project",
+    version=0,
+    schema=None,
+    fields=[],
+    preview=[],
+    ui={"component": "Base"},
+)
+
+TPL_PLAN = TypeDescriptor(
+    type="tpl.plan",
+    display_name="TPL Plan",
+    version=0,
+    schema=None,
+    fields=[],
+    preview=[],
+    ui={"component": "Base"},
+)
+
+TPL_LOG = TypeDescriptor(
+    type="tpl.log",
+    display_name="TPL Execution Log",
+    version=0,
+    schema=None,
+    fields=[],
+    preview=[],
+    ui={"component": "Base"},
+)
+
+
 DATA_TYPES: dict[str, TypeDescriptor] = {
-    d.type: d for d in (BASE, TABULAR, FORMULA, IMAGE)
+    d.type: d
+    for d in (BASE, TABULAR, FORMULA, IMAGE, DAC_WEB_PROJECT, TPL_PLAN, TPL_LOG)
 }
 
 

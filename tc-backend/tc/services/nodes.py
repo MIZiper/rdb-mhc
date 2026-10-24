@@ -23,7 +23,9 @@ from tc.services.metahub import expand_tag_ids
 
 # Column list used by every "meta" SELECT; row_to_meta expects this shape.
 NODE_META_COLUMNS = """n.id, n.title, n.description, n.updated_at, n.content_type,
-                       n.creator_name, n.creator_sub, n.status, n.visibility"""
+                       n.creator_name, n.creator_sub, n.status, n.visibility,
+                       n.source_system, n.source_id, n.source_part, n.source_url,
+                       n.source_linked_at, n.source_linked_by"""
 
 
 def row_to_meta(row, tag_ids: Optional[list[int]] = None) -> NodeMetaRead:
@@ -38,6 +40,12 @@ def row_to_meta(row, tag_ids: Optional[list[int]] = None) -> NodeMetaRead:
         creator_sub=row["creator_sub"],
         status=row["status"],
         visibility=row["visibility"],
+        source_system=row.get("source_system"),
+        source_id=row.get("source_id"),
+        source_part=row.get("source_part"),
+        source_url=row.get("source_url"),
+        source_linked_at=row.get("source_linked_at"),
+        source_linked_by=row.get("source_linked_by"),
     )
 
 
@@ -239,7 +247,8 @@ async def persist_content(
         """UPDATE nodes SET content=$1, content_type=$2, updated_at=NOW()
            WHERE id=$3
            RETURNING updated_at, title, description, creator_name, creator_sub,
-                     status, visibility""",
+                     status, visibility, source_system, source_id, source_part,
+                     source_url, source_linked_at, source_linked_by""",
         content,
         content_type,
         node_id,

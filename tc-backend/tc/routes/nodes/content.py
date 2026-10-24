@@ -114,7 +114,9 @@ async def get_node_data(
 ):
     row = await conn.fetchrow(
         """SELECT id, title, description, content, content_type, updated_at,
-                  creator_name, creator_sub, status, visibility
+                  creator_name, creator_sub, status, visibility,
+                  source_system, source_id, source_part, source_url,
+                  source_linked_at, source_linked_by
            FROM nodes WHERE id=$1""",
         node_id,
     )
@@ -144,6 +146,12 @@ async def get_node_data(
         creator_sub=row["creator_sub"],
         status=row["status"],
         visibility=row["visibility"],
+        source_system=row.get("source_system"),
+        source_id=row.get("source_id"),
+        source_part=row.get("source_part"),
+        source_url=row.get("source_url"),
+        source_linked_at=row.get("source_linked_at"),
+        source_linked_by=row.get("source_linked_by"),
     )
 
 
@@ -177,6 +185,12 @@ async def patch_node_data(
         "creator_sub": updated["creator_sub"],
         "status": updated["status"],
         "visibility": updated["visibility"],
+        "source_system": updated.get("source_system"),
+        "source_id": updated.get("source_id"),
+        "source_part": updated.get("source_part"),
+        "source_url": updated.get("source_url"),
+        "source_linked_at": updated.get("source_linked_at"),
+        "source_linked_by": updated.get("source_linked_by"),
     }
 
 
@@ -210,6 +224,12 @@ async def ingest_node_data(
         creator_sub=row["creator_sub"],
         status=row["status"],
         visibility=row["visibility"],
+        source_system=row.get("source_system"),
+        source_id=row.get("source_id"),
+        source_part=row.get("source_part"),
+        source_url=row.get("source_url"),
+        source_linked_at=row.get("source_linked_at"),
+        source_linked_by=row.get("source_linked_by"),
     )
 
 

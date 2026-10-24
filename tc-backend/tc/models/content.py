@@ -44,6 +44,12 @@ class NodeContentRead(BaseModel):
     creator_sub: Optional[str] = None
     status: str = "draft"
     visibility: str = "public"
+    source_system: Optional[str] = None
+    source_id: Optional[str] = None
+    source_part: Optional[str] = None
+    source_url: Optional[str] = None
+    source_linked_at: Optional[datetime] = None
+    source_linked_by: Optional[str] = None
 
 
 class NodeContentCreate(BaseModel):
