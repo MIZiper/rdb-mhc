@@ -11,11 +11,21 @@ import FormulaTypeViewer from "./formula/FormulaTypeViewer.svelte";
 import ImageViewer from "./image/ImageViewer.svelte";
 import ImageEditor from "./image/ImageEditor.svelte";
 import ImageTypeViewer from "./image/ImageTypeViewer.svelte";
+import SourceItemViewer from "./source/SourceItemViewer.svelte";
 
 /** Register the built-in content-type renderers. */
 export function registerProcessors(): void {
     registry.register(
         new BaseProcessor("Base.v00", "Base Item", BaseViewer, BaseEditor, BaseTypeViewer),
+    );
+    registry.register(
+        new BaseProcessor(
+            "SourceItem.v00",
+            "Source Item",
+            SourceItemViewer,
+            null,
+            BaseTypeViewer,
+        ),
     );
     registry.register(
         new BaseProcessor("Tabular.v00", "Tabular Data", TabularViewer, TabularEditor, TabularTypeViewer),
@@ -32,7 +42,7 @@ export function registerProcessors(): void {
         ["tpl.log", "TPL Execution Log"],
     ] as const) {
         registry.register(
-            new BaseProcessor(type, name, BaseViewer, BaseEditor, BaseTypeViewer),
+            new BaseProcessor(type, name, null, null, BaseTypeViewer, false),
         );
     }
 }

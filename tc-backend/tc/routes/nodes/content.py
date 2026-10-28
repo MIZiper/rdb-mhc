@@ -9,16 +9,24 @@ from __future__ import annotations
 from typing import Any, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from asyncpg.connection import Connection
 
-from tc.auth.permissions import ROLE_CREATE, can_see_node, check_edit_node, require_role
+from tc.auth.permissions import (
+    ROLE_CREATE,
+    ROLE_EDIT_ANY,
+    can_see_node,
+    check_edit_node,
+    require_role,
+)
 from tc.auth.provider import get_current_user, get_optional_user
+from tc.content_types.registry import get_descriptor, is_source_item
 from tc.db.connection import get_db
 from tc.models import NodeMetaList, NodeMetaRead
 from tc.models.content import ContentPayload, NodeContentCreate, NodeContentRead
 from tc.services.nodes import (
     NODE_META_COLUMNS,
+    is_frozen,
     link_file_refs,
     load_tags_map,
     persist_content,
@@ -70,6 +78,15 @@ async def add_node_with_content(
     conn: Connection = Depends(get_db),
     user: dict = Depends(require_role(ROLE_CREATE)),
 ):
+    descriptor = get_descriptor(node.data_type)
+    if descriptor is None:
+        raise HTTPException(status_code=400, detail="Unknown data type")
+    if not descriptor.creatable and ROLE_EDIT_ANY not in user.get("roles", []):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Data type '{node.data_type}' is managed by an external source",
+        )
+
     row = await conn.fetchrow(
         """INSERT INTO nodes (title, description, content, content_type,
                               creator_sub, creator_name, status, visibility)
@@ -103,6 +120,7 @@ async def add_node_with_content(
         creator_sub=user["sub"],
         status="draft",
         visibility=node.visibility,
+        source_item=is_source_item(node.data_type),
     )
 
 
@@ -116,7 +134,7 @@ async def get_node_data(
         """SELECT id, title, description, content, content_type, updated_at,
                   creator_name, creator_sub, status, visibility,
                   source_system, source_id, source_part, source_url,
-                  source_linked_at, source_linked_by
+                  source_linked_at, source_linked_by, frozen
            FROM nodes WHERE id=$1""",
         node_id,
     )
@@ -129,9 +147,6 @@ async def get_node_data(
         user.get("roles", []), row["visibility"], row["creator_sub"], user["sub"]
     ):
         raise HTTPException(status_code=404, detail="Node not found")
-
-    if not row["content"]:
-        raise HTTPException(status_code=404, detail="Node has no data")
 
     tags_map = await load_tags_map(conn, [node_id])
     return NodeContentRead(
@@ -152,6 +167,8 @@ async def get_node_data(
         source_url=row.get("source_url"),
         source_linked_at=row.get("source_linked_at"),
         source_linked_by=row.get("source_linked_by"),
+        frozen=is_frozen(row["status"], row.get("frozen", False)),
+        source_item=is_source_item(row.get("content_type")),
     )
 
 
@@ -163,11 +180,15 @@ async def patch_node_data(
     user: dict = Depends(get_current_user),
 ):
     row = await conn.fetchrow(
-        "SELECT content, content_type, creator_sub FROM nodes WHERE id=$1", node_id
+        """SELECT content, content_type, creator_sub, source_system,
+                  status, frozen
+           FROM nodes WHERE id=$1""",
+        node_id,
     )
     if row is None:
         raise HTTPException(status_code=404, detail="Node not found")
     check_edit_node(user, row.get("creator_sub"))
+    _check_source_content_edit(row, user)
 
     merged = _deep_merge(row["content"] or {}, updates)
     updated = await persist_content(conn, node_id, merged, row["content_type"])
@@ -191,6 +212,8 @@ async def patch_node_data(
         "source_url": updated.get("source_url"),
         "source_linked_at": updated.get("source_linked_at"),
         "source_linked_by": updated.get("source_linked_by"),
+        "frozen": is_frozen(updated["status"], row.get("frozen", False)),
+        "source_item": is_source_item(row.get("content_type")),
     }
 
 
@@ -202,11 +225,14 @@ async def ingest_node_data(
     user: dict = Depends(get_current_user),
 ):
     existing = await conn.fetchrow(
-        "SELECT id, creator_sub FROM nodes WHERE id=$1", node_id
+        """SELECT id, creator_sub, source_system, status, frozen
+           FROM nodes WHERE id=$1""",
+        node_id,
     )
     if existing is None:
         raise HTTPException(status_code=404, detail="Node not found")
     check_edit_node(user, existing.get("creator_sub"))
+    _check_source_content_edit(existing, user)
 
     content_type = payload.data_type or _embedded_type(payload.content)
     row = await persist_content(conn, node_id, payload.content, content_type)
@@ -230,7 +256,22 @@ async def ingest_node_data(
         source_url=row.get("source_url"),
         source_linked_at=row.get("source_linked_at"),
         source_linked_by=row.get("source_linked_by"),
+        frozen=is_frozen(row["status"], existing.get("frozen", False)),
+        source_item=is_source_item(content_type),
     )
+
+
+def _check_source_content_edit(row, user: dict) -> None:
+    """Content of a source-linked node is owned by that source.
+
+    ``nodes:edit_any`` keeps an administrative repair path; everyone else
+    must use the push endpoint so provenance is recorded.
+    """
+    if row.get("source_system") and ROLE_EDIT_ANY not in user.get("roles", []):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Content is managed by the linked source application",
+        )
 
 
 def _embedded_type(content: Any) -> Optional[str]:

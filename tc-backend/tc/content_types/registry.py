@@ -20,7 +20,31 @@ BASE = TypeDescriptor(
     ui={"component": "Base"},
 )
 
+# --- Source item: unified entry for source-managed resources --------------
+# Users create a Source Item in TC, then link it from a source application.
+# The source app fills in the concrete type through PUT /api/nodes/{id}/source.
+SOURCE_ITEM = TypeDescriptor(
+    type="SourceItem.v00",
+    display_name="Source Item",
+    version=0,
+    schema=None,
+    fields=[],
+    preview=[],
+    ui={"component": "SourceItem", "source_item": True},
+)
+
 # --- Tabular: channel / time / value series ------------------------------
+def _merge_tabular(existing, incoming):
+    if isinstance(existing, dict) and isinstance(incoming, dict):
+        merged = {**existing, **incoming}
+        if isinstance(existing.get("channels"), list) and isinstance(
+            incoming.get("channels"), list
+        ):
+            merged["channels"] = existing["channels"] + incoming["channels"]
+        return merged
+    return incoming
+
+
 TABULAR = TypeDescriptor(
     type="Tabular.v00",
     display_name="Tabular Data",
@@ -41,6 +65,7 @@ TABULAR = TypeDescriptor(
     ],
     preview=["channel", "value"],
     ui={"component": "Tabular"},
+    merge=_merge_tabular,
 )
 
 # --- Formula: named expressions ------------------------------------------
@@ -95,6 +120,8 @@ DAC_WEB_PROJECT = TypeDescriptor(
     fields=[],
     preview=[],
     ui={"component": "Base"},
+    creatable=False,
+    source_system="dac_web",
 )
 
 TPL_PLAN = TypeDescriptor(
@@ -105,6 +132,8 @@ TPL_PLAN = TypeDescriptor(
     fields=[],
     preview=[],
     ui={"component": "Base"},
+    creatable=False,
+    source_system="tpl",
 )
 
 TPL_LOG = TypeDescriptor(
@@ -115,12 +144,30 @@ TPL_LOG = TypeDescriptor(
     fields=[],
     preview=[],
     ui={"component": "Base"},
+    creatable=False,
+    source_system="tpl",
 )
 
 
 DATA_TYPES: dict[str, TypeDescriptor] = {
     d.type: d
-    for d in (BASE, TABULAR, FORMULA, IMAGE, DAC_WEB_PROJECT, TPL_PLAN, TPL_LOG)
+    for d in (
+        BASE,
+        SOURCE_ITEM,
+        TABULAR,
+        FORMULA,
+        IMAGE,
+        DAC_WEB_PROJECT,
+        TPL_PLAN,
+        TPL_LOG,
+    )
+}
+
+# Backward-compatible fallback for clients that only send source coordinates.
+_SOURCE_PART_TYPES: dict[tuple[str, str], str] = {
+    ("dac_web", "project"): DAC_WEB_PROJECT.type,
+    ("tpl", "plan"): TPL_PLAN.type,
+    ("tpl", "log"): TPL_LOG.type,
 }
 
 
@@ -132,3 +179,30 @@ def get_descriptor(data_type: str | None) -> TypeDescriptor | None:
 
 def all_descriptors() -> list[TypeDescriptor]:
     return list(DATA_TYPES.values())
+
+
+def is_source_item(data_type: str | None) -> bool:
+    descriptor = get_descriptor(data_type)
+    return bool(descriptor and descriptor.ui.get("source_item"))
+
+
+def resolve_source_type(
+    source_system: str | None, source_part: str | None
+) -> str | None:
+    if not source_system or not source_part:
+        return None
+    return _SOURCE_PART_TYPES.get((source_system, source_part))
+
+
+def source_types(source_system: str | None) -> list[str]:
+    """Types managed by a source application (legacy unlinked candidates)."""
+    return [
+        d.type
+        for d in DATA_TYPES.values()
+        if d.source_system and (source_system is None or d.source_system == source_system)
+    ]
+
+
+def is_source_managed(data_type: str | None) -> bool:
+    descriptor = get_descriptor(data_type)
+    return bool(descriptor and descriptor.source_system)

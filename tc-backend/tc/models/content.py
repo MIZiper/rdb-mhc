@@ -50,6 +50,8 @@ class NodeContentRead(BaseModel):
     source_url: Optional[str] = None
     source_linked_at: Optional[datetime] = None
     source_linked_by: Optional[str] = None
+    frozen: bool = False
+    source_item: bool = False
 
 
 class NodeContentCreate(BaseModel):
@@ -59,3 +61,30 @@ class NodeContentCreate(BaseModel):
     data_type: str
     tag_ids: list[int] = Field(default_factory=list)
     visibility: str = "public"
+
+
+class NodePushRequest(BaseModel):
+    """Content pushed by a source application."""
+
+    content: Any
+    data_type: Optional[str] = None
+    mode: str = Field("a", pattern="^[wa]$")
+    source_system: Optional[str] = Field(None, max_length=50)
+    source_id: Optional[str] = Field(None, max_length=255)
+    source_part: Optional[str] = Field(None, max_length=50)
+    source_url: Optional[str] = None
+
+    @field_validator("content", mode="before")
+    @classmethod
+    def _validate_size(cls, value: Any) -> Any:
+        serialized = json.dumps(value)
+        if len(serialized.encode("utf-8")) > MAX_CONTENT_BYTES:
+            raise ValueError("Data payload exceeds maximum size of 10MB")
+        return value
+
+    @field_validator("mode")
+    @classmethod
+    def _validate_mode(cls, value: str) -> str:
+        if value not in {"w", "a"}:
+            raise ValueError("mode must be 'w' or 'a'")
+        return value

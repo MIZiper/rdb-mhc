@@ -26,6 +26,8 @@ class NodeMetaRead(BaseModel):
     source_url: Optional[str] = None
     source_linked_at: Optional[datetime] = None
     source_linked_by: Optional[str] = None
+    frozen: bool = False
+    source_item: bool = False
 
 
 class NodeStateRead(BaseModel):
@@ -42,6 +44,8 @@ class NodeStateRead(BaseModel):
     source_url: Optional[str] = None
     source_linked_at: Optional[datetime] = None
     source_linked_by: Optional[str] = None
+    frozen: bool = False
+    source_item: bool = False
 
 
 class NodeSourceUpdate(BaseModel):
@@ -49,6 +53,9 @@ class NodeSourceUpdate(BaseModel):
     source_id: str = Field(..., min_length=1, max_length=255)
     source_part: str = Field(..., min_length=1, max_length=50)
     source_url: str = Field(..., min_length=1)
+    data_type: Optional[str] = Field(
+        None, description="Concrete content type owned by the source application"
+    )
 
 
 class NodeMetaList(BaseModel):
@@ -81,3 +88,19 @@ class NodeStatusUpdate(BaseModel):
         if value not in allowed:
             raise ValueError(f"status must be one of: {', '.join(sorted(allowed))}")
         return value
+
+
+class NodeContributionRead(BaseModel):
+    node_id: UUID
+    node_title: str
+    data_type: Optional[str] = None
+    status: Optional[str] = None
+    source_system: str
+    source_id: str
+    source_part: str
+    source_url: Optional[str] = None
+    contributed_type: Optional[str] = None
+    mode: str = "a"
+    push_count: int = 1
+    pushed_at: datetime
+    pushed_by: Optional[str] = None

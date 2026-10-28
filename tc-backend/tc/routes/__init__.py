@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from tc.routes import admin, config, files, permissions, types
-from tc.routes.nodes import content, meta, push, query, state
+from tc.routes.nodes import contributions, content, meta, push, query, state
 
 api_router = APIRouter()
 
@@ -18,6 +18,7 @@ api_router.include_router(meta.router)
 api_router.include_router(content.router)
 api_router.include_router(state.router)
 api_router.include_router(push.router)
+api_router.include_router(contributions.router)
 api_router.include_router(query.router)
 api_router.include_router(files.router)
 api_router.include_router(types.router)

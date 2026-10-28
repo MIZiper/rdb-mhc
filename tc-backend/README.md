@@ -21,7 +21,7 @@ tc/
     files.py        # upload storage + node file linking
     metahub.py      # MetaHub HTTP client
   routes/
-    nodes/          # meta.py, content.py, push.py, query.py
+    nodes/          # meta.py, content.py, state.py, push.py, contributions.py, query.py
     files.py  types.py  config.py  permissions.py  admin.py
   db/
     connection.py   # asyncpg pool
@@ -37,20 +37,60 @@ tc/
   local development uses realm `master` and client `miz`)
 - `TC_STORAGE_ROOT` — directory for uploaded file bytes (default: `./storage`)
 - `TC_MAX_UPLOAD_MB` — maximum upload size in MB (default: `25`)
+- `TC_FROZEN_STATUSES` — comma-separated statuses that reject content pushes
+  (default: `pending_review,published,archived`)
 - `FRONTEND_DIST` — when set to a directory, serve it as the SPA at `/`
 
 The schema is applied automatically on startup (`db/schema.sql`, idempotent).
 
 ### External source links
 
-Nodes may represent metadata-only resources owned by another application. The source application creates the TC node first, then attaches itself through:
+Nodes may represent resources owned by another application. The user creates a
+single **Source Item** (`SourceItem.v00`) in TC, then the source application
+attaches itself through:
 
+- `GET /api/nodes/source-candidates` — unlinked Source Items the caller can edit
 - `GET /api/nodes/{id}/state`
 - `PATCH /api/nodes/{id}/state` (`nodes:review`)
 - `GET/PUT/DELETE /api/nodes/{id}/source`
 
-`source_system`, `source_id`, `source_part` and `source_url` are stored on the node; the unique source tuple prevents two TC nodes from representing the same app resource part. Status remains TC-owned; applications map statuses to their own frozen set. `dac_web.project`, `tpl.plan` and `tpl.log` are metadata-only built-in types;
-they are intended to be created in TC by the user, then linked from the source app.
+`PUT /api/nodes/{id}/source` accepts a `data_type` owned by that source (for
+example `dac_web.project`, `tpl.plan`, `tpl.log`). TC writes `source_*` and
+`content_type` atomically; `DELETE` restores `SourceItem.v00`. The unique source
+tuple prevents two TC nodes from representing the same app resource part.
+`dac_web.project`, `tpl.plan` and `tpl.log` are not offered in the generic
+create picker (`ui.creatable = false`); they are filled in by the link request.
+The TC detail page shows the source system, source part and an "Open in ..." link.
+
+### Pushing content and frozen nodes
+
+Source applications may push data into an existing node:
+
+```text
+PUT /api/nodes/{id}/push/data
+{
+  "content": { ... },
+  "data_type": "Tabular.v00",
+  "mode": "a",
+  "source_system": "dac_web",
+  "source_id": "<project-id>",
+  "source_part": "result",
+  "source_url": "..."
+}
+```
+
+- `mode=w` replaces content; `mode=a` merges dicts and concatenates lists
+  (Tabular `channels` are appended).
+- A Source Item is typed by the first push; later pushes must use the same type.
+- Every successful push upserts `node_contributions`, so one node can record
+  multiple contributing projects.
+- `GET /api/nodes/{id}/contributions` and
+  `GET /api/nodes/contributions?source_system=...&source_id=...` expose them.
+- Frozen nodes (`frozen = true` or status in `TC_FROZEN_STATUSES`, default
+  `pending_review,published,archived`) reject pushes with `423 Locked`.
+- Direct content writes on source-linked nodes are limited to
+  `nodes:edit_any`; push permission follows the normal creator/`nodes:edit_any`
+  edit check.
 
 ---
 

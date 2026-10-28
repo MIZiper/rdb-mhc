@@ -43,6 +43,9 @@ class Settings:
     storage_root: str
     max_upload_mb: int
 
+    # Statuses that make a node immutable for pushes / source content writes.
+    frozen_statuses: str
+
     # Frontend (served as a static SPA when set)
     frontend_dist: Optional[str]
 
@@ -55,6 +58,14 @@ class Settings:
     @property
     def max_upload_bytes(self) -> int:
         return self.max_upload_mb * 1024 * 1024
+
+    @property
+    def frozen_status_set(self) -> set[str]:
+        return {
+            item.strip()
+            for item in self.frozen_statuses.split(",")
+            if item.strip()
+        }
 
 
 def load_settings() -> Settings:
@@ -72,6 +83,9 @@ def load_settings() -> Settings:
         metahub_host=os.getenv("TC_METAHUB", "localhost:8033"),
         storage_root=os.getenv("TC_STORAGE_ROOT", "./storage"),
         max_upload_mb=_int_env("TC_MAX_UPLOAD_MB", 25),
+        frozen_statuses=os.getenv(
+            "TC_FROZEN_STATUSES", "pending_review,published,archived"
+        ),
         frontend_dist=os.getenv("FRONTEND_DIST") or None,
     )
 

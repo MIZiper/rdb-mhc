@@ -14,12 +14,15 @@
     } from "@sveltestrap/sveltestrap";
 
     import { TagsSelector, type TagMeta } from "@mizip/metahub";
-    import type { ItemDetail } from "../types";
+    import type { ItemDetail, NodeContribution } from "../types";
     import { getContext, onMount } from "svelte";
     import { constructTagsById, fetchTagsInfo } from "../lib/api/metahub";
     import { registry, type BaseProcessor } from "../modules/registry";
     import { authFetch, hasRole, getAuthContext } from "../lib/auth";
     import { deleteImage } from "../lib/api/files";
+    import { fetchNodeContributions } from "../lib/api/nodes";
+    import SourcePanel from "../components/SourcePanel.svelte";
+    import ContributionsPanel from "../components/ContributionsPanel.svelte";
     import {
         statusColor,
         statusLabel,
@@ -35,6 +38,7 @@
     let metahub_host = (getContext("mh_host") as string) || "";
     let processor: BaseProcessor | null = $state(null);
     let loadError = $state("");
+    let contributions: NodeContribution[] = $state([]);
 
     let editMode = $state(false);
     let editTitle = $state("");
@@ -63,6 +67,12 @@
         return item.creator_sub === getAuthContext()?.user?.sub;
     }
 
+    function checkCanEditContent(): boolean {
+        if (!item) return false;
+        if (!item.source_system) return checkCanEdit();
+        return hasRole("nodes:edit_any");
+    }
+
     onMount(async () => {
         const res = await authFetch(`/api/nodes/${item_id}/data`);
         if (!res.ok) {
@@ -89,8 +99,18 @@
             source_id: data.source_id ?? null,
             source_part: data.source_part ?? null,
             source_url: data.source_url ?? null,
+            frozen: !!data.frozen,
+            source_item: !!data.source_item,
         };
         selectedStatus = data.status;
+
+        fetchNodeContributions(item_id)
+            .then((rows) => {
+                contributions = rows;
+            })
+            .catch(() => {
+                contributions = [];
+            });
 
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get("edit") === "1" && checkCanEdit()) {
@@ -246,6 +266,9 @@
                     <Badge class="text-bg-{statusColor(item.status)}">
                         {statusLabel(item.status)}
                     </Badge>
+                    {#if item.frozen}
+                        <Badge class="text-bg-warning">Frozen</Badge>
+                    {/if}
                     {#if item.visibility !== "public"}
                         <Badge class="text-bg-{visibilityColor(item.visibility)}">
                             {item.visibility}
@@ -272,11 +295,20 @@
             {/if}
         </div>
 
+        {#if item.source_system}
+            <SourcePanel
+                sourceSystem={item.source_system}
+                sourcePart={item.source_part}
+                sourceUrl={item.source_url}
+                frozen={item.frozen}
+            />
+        {/if}
+
         <Row class="g-4">
             <Col lg="8">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <h5 class="mb-0">Content</h5>
-                    {#if checkCanEdit() && processor?.editor && !contentEditMode}
+                    {#if checkCanEditContent() && processor?.editor && !contentEditMode}
                         <Button color="link" size="sm" class="px-0" onclick={enterContentEdit}>
                             Edit Content
                         </Button>
@@ -299,8 +331,15 @@
                             <Button color="secondary" class="ms-2" onclick={cancelContentEdit}>Cancel</Button>
                         </div>
                     </div>
-                {:else}
+                {:else if processor.viewer}
                     <processor.viewer content_in={item.content} />
+                {:else if item.source_system}
+                    <p class="text-muted">
+                        Content is managed by {item.source_system}. Use the source
+                        application to view or change it.
+                    </p>
+                {:else}
+                    <p class="text-muted">No content</p>
                 {/if}
             </Col>
 
@@ -401,6 +440,12 @@
                             {/if}
                         </CardBody>
                     </Card>
+                {/if}
+
+                {#if item.source_system || contributions.length > 0}
+                    <div class="mt-3">
+                        <ContributionsPanel {contributions} />
+                    </div>
                 {/if}
             </Col>
         </Row>

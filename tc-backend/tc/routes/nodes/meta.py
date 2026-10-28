@@ -15,12 +15,14 @@ from asyncpg.connection import Connection
 
 from tc.auth.permissions import (
     ROLE_CREATE,
+    ROLE_EDIT_ANY,
     ROLE_REVIEW,
     can_see_node,
     check_edit_node,
     require_role,
 )
 from tc.auth.provider import get_current_user, get_optional_user
+from tc.content_types.registry import SOURCE_ITEM, all_descriptors
 from tc.db.connection import get_db
 from tc.models import (
     NodeCreate,
@@ -36,6 +38,7 @@ from tc.services.nodes import (
     row_to_meta,
     visibility_clause,
 )
+from tc.settings import settings
 
 router = APIRouter(prefix="/nodes")
 
@@ -43,7 +46,7 @@ _SELECT = f"SELECT {NODE_META_COLUMNS} FROM nodes n"
 _RETURNING = """RETURNING id, title, description, updated_at, content_type,
                 creator_name, creator_sub, status, visibility,
                 source_system, source_id, source_part, source_url,
-                source_linked_at, source_linked_by"""
+                source_linked_at, source_linked_by, frozen"""
 
 
 def _can_see_row(row, user: Optional[dict]) -> bool:
@@ -76,6 +79,7 @@ async def list_nodes(
             SELECT
                 id, title, description, updated_at, n.content_type,
                 n.creator_name, n.creator_sub, n.status, n.visibility,
+                n.frozen,
                 ts_headline('english', title, query,
                             'StartSel=<strong>, StopSel=</strong>') AS title_highlight,
                 ts_rank(search_vector, query) AS relevance
@@ -97,6 +101,7 @@ async def list_nodes(
             SELECT
                 id, title, description, updated_at, n.content_type,
                 n.creator_name, n.creator_sub, n.status, n.visibility,
+                n.frozen,
                 NULL AS title_highlight, NULL AS relevance
             FROM nodes n
             {v_clause}
@@ -149,6 +154,7 @@ async def search_nodes_by_tags(
         SELECT
             n.id, n.title, n.description, n.updated_at, n.content_type,
             n.creator_name, n.creator_sub, n.status, n.visibility,
+            n.frozen,
             COUNT(nt.tag_id) AS match_count,
             (
                 SELECT array_agg(t2.tag_id)
@@ -165,6 +171,108 @@ async def search_nodes_by_tags(
     rows = await conn.fetch(query, *args)
     return NodeMetaList(
         items=[row_to_meta(row, row["tag_ids"]) for row in rows],
+        total=len(rows),
+    )
+
+
+@router.get("/source-candidates", response_model=NodeMetaList)
+async def list_source_candidates(
+    source_system: Optional[str] = Query(None),
+    q: str = Query(""),
+    page_size: int = Query(20, ge=1, le=100),
+    conn: Connection = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
+    """Unlinked Source Items the caller may attach to a source resource."""
+    types = [SOURCE_ITEM.type]
+    types += [
+        descriptor.type
+        for descriptor in all_descriptors()
+        if descriptor.source_system
+        and (source_system is None or descriptor.source_system == source_system)
+    ]
+    types = list(dict.fromkeys(types))
+
+    args: list = [types]
+    clauses = [
+        "n.source_system IS NULL",
+        "n.content_type = ANY($1::text[])",
+    ]
+    if ROLE_EDIT_ANY not in user.get("roles", []):
+        args.append(user["sub"])
+        clauses.append(f"n.creator_sub = ${len(args)}")
+    if q.strip():
+        args.append(f"%{q.strip()}%")
+        idx = len(args)
+        clauses.append(f"(n.title ILIKE ${idx} OR n.description ILIKE ${idx})")
+
+    args.append(page_size)
+    rows = await conn.fetch(
+        f"""SELECT {NODE_META_COLUMNS} FROM nodes n
+            WHERE {' AND '.join(clauses)}
+            ORDER BY n.updated_at DESC
+            LIMIT ${len(args)}""",
+        *args,
+    )
+    tags_map = await load_tags_map(conn, [row["id"] for row in rows])
+    return NodeMetaList(
+        items=[row_to_meta(row, tags_map.get(row["id"], [])) for row in rows],
+        total=len(rows),
+    )
+
+
+@router.get("/push-candidates", response_model=NodeMetaList)
+async def list_push_candidates(
+    q: str = Query(""),
+    data_type: Optional[str] = Query(None),
+    page_size: int = Query(20, ge=1, le=100),
+    conn: Connection = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
+    """Editable, non-frozen nodes a source application may push content into."""
+    args: list = []
+    clauses = [
+        "n.content_type IS NOT NULL",
+        "n.source_system IS NULL",
+        "n.frozen = FALSE",
+    ]
+    if settings.frozen_status_set:
+        args.append(sorted(settings.frozen_status_set))
+        clauses.append(f"n.status <> ALL(${len(args)}::text[])")
+
+    if ROLE_EDIT_ANY not in user.get("roles", []):
+        args.append(user["sub"])
+        clauses.append(f"n.creator_sub = ${len(args)}")
+
+    source_types = [
+        descriptor.type
+        for descriptor in all_descriptors()
+        if descriptor.source_system
+    ]
+    if source_types:
+        args.append(source_types)
+        clauses.append(f"n.content_type <> ALL(${len(args)}::text[])")
+
+    if data_type:
+        args.append([SOURCE_ITEM.type, data_type])
+        clauses.append(f"n.content_type = ANY(${len(args)}::text[])")
+
+    if q.strip():
+        args.append(f"%{q.strip()}%")
+        idx = len(args)
+        clauses.append(f"(n.title ILIKE ${idx} OR n.description ILIKE ${idx})")
+
+    args.append(page_size)
+    rows = await conn.fetch(
+        f"""SELECT {NODE_META_COLUMNS} FROM nodes n
+            WHERE {' AND '.join(clauses)}
+            ORDER BY n.updated_at DESC
+            LIMIT ${len(args)}""",
+        *args,
+    )
+    tags_map = await load_tags_map(conn, [row["id"] for row in rows])
+    return NodeMetaList(
+        items=[row_to_meta(row, tags_map.get(row["id"], [])) for row in rows],
         total=len(rows),
     )
 

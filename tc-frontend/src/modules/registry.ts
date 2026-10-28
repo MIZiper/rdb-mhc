@@ -23,6 +23,8 @@ export class BaseProcessor {
         public viewer: Component<ViewerProps> | null,
         public editor: Component<any, EditorExports> | null,
         public typeViewer: Component<TypeViewerProps> | null = null,
+        /** Source-managed types are not offered in the generic "New" picker. */
+        public creatable: boolean = true,
     ) { }
 }
 
@@ -49,6 +51,12 @@ class ProcessorRegistry {
             type: p.type,
             name: p.name,
         }));
+    }
+
+    allCreatable(): Array<{ type: string; name: string }> {
+        return Array.from(this.processors.values())
+            .filter((p) => p.creatable)
+            .map((p) => ({ type: p.type, name: p.name }));
     }
 }
 

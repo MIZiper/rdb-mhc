@@ -7,7 +7,17 @@ export {
     fetchFieldValues,
 } from "./types";
 export type { FieldValues, FieldValueFacet } from "./types";
-export { queryNodes, aggregateNodes, batchNodeData } from "./nodes";
+export {
+    queryNodes,
+    aggregateNodes,
+    batchNodeData,
+    getNodeState,
+    updateNodeState,
+    attachNodeSource,
+    detachNodeSource,
+    fetchNodeContributions,
+    fetchContributionsBySource,
+} from "./nodes";
 export { uploadImage, deleteImage } from "./files";
 export type { UploadedImage } from "./files";
 export { fetchTagsInfo, constructTagsById } from "./metahub";

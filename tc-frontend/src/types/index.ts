@@ -18,6 +18,8 @@ export interface ItemMeta {
     source_id?: string | null;
     source_part?: string | null;
     source_url?: string | null;
+    frozen?: boolean;
+    source_item?: boolean;
     /** Projected preview fields (keyed by canonical field key). */
     fields?: Record<string, unknown>;
 }
@@ -25,6 +27,22 @@ export interface ItemMeta {
 /** A node with its full content, as shown in the detail view. */
 export interface ItemDetail extends ItemMeta {
     content: any;
+}
+
+export interface NodeContribution {
+    node_id: string;
+    node_title: string;
+    data_type: string | null;
+    status: string | null;
+    source_system: string;
+    source_id: string;
+    source_part: string;
+    source_url: string | null;
+    contributed_type: string | null;
+    mode: string;
+    push_count: number;
+    pushed_at: string;
+    pushed_by: string | null;
 }
 
 // --- Content-type descriptors ---------------------------------------------
@@ -46,7 +64,12 @@ export interface TypeDescriptor {
     version: number;
     schema: any;
     preview: string[];
-    ui: { component?: string };
+    ui: {
+        component?: string;
+        creatable?: boolean;
+        source_system?: string;
+        source_item?: boolean;
+    };
     fields: FieldSpec[];
 }
 

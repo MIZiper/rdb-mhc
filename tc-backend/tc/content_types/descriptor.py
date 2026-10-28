@@ -57,15 +57,25 @@ class TypeDescriptor:
     preview: list[str] = dc_field(default_factory=list)
     ui: dict[str, Any] = dc_field(default_factory=dict)
     upcast: Callable[[Any], Any] | None = None
+    # Optional type-aware merge used by ``mode=a`` pushes.
+    merge: Callable[[Any, Any], Any] | None = None
+    # ``creatable`` hides source-managed types from the generic "New" picker.
+    # ``source_system`` marks a type whose content is owned by an external app.
+    creatable: bool = True
+    source_system: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        ui = dict(self.ui)
+        ui.setdefault("creatable", self.creatable)
+        if self.source_system:
+            ui["source_system"] = self.source_system
         return {
             "type": self.type,
             "display_name": self.display_name,
             "version": self.version,
             "schema": self.schema,
             "preview": self.preview,
-            "ui": self.ui,
+            "ui": ui,
             "fields": [
                 {
                     "path": f.path,

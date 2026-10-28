@@ -15,17 +15,22 @@ from asyncpg.connection import Connection
 
 from tc.auth.permissions import ROLE_READ_ALL
 from tc.content_types.descriptor import extract_field_rows
-from tc.content_types.registry import get_descriptor
+from tc.content_types.registry import get_descriptor, is_source_item
 from tc.models.node import NodeMetaRead
 from tc.models.query import QueryFilter
 from tc.services.files import link_file_refs
 from tc.services.metahub import expand_tag_ids
+from tc.settings import settings
 
 # Column list used by every "meta" SELECT; row_to_meta expects this shape.
 NODE_META_COLUMNS = """n.id, n.title, n.description, n.updated_at, n.content_type,
                        n.creator_name, n.creator_sub, n.status, n.visibility,
                        n.source_system, n.source_id, n.source_part, n.source_url,
-                       n.source_linked_at, n.source_linked_by"""
+                       n.source_linked_at, n.source_linked_by, n.frozen"""
+
+
+def is_frozen(status: Optional[str], frozen: bool = False) -> bool:
+    return bool(frozen) or bool(status and status in settings.frozen_status_set)
 
 
 def row_to_meta(row, tag_ids: Optional[list[int]] = None) -> NodeMetaRead:
@@ -46,6 +51,8 @@ def row_to_meta(row, tag_ids: Optional[list[int]] = None) -> NodeMetaRead:
         source_url=row.get("source_url"),
         source_linked_at=row.get("source_linked_at"),
         source_linked_by=row.get("source_linked_by"),
+        frozen=is_frozen(row["status"], row.get("frozen", False)),
+        source_item=is_source_item(row["content_type"]),
     )
 
 

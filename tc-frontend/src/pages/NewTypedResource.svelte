@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Col, Container, Input, Label, Row } from "@sveltestrap/sveltestrap";
     import { getContext } from "svelte";
+    import { searchParams } from "sv-router";
     import { BaseProcessor, registry } from "../modules/registry";
     import NewResource from "../components/NewResource.svelte";
     import type { ItemMeta } from "../types";
@@ -14,9 +15,21 @@
     let saving: boolean = $state(false);
     let errorMsg: string = $state("");
     let successMsg: string = $state("");
+    let initialized: boolean = $state(false);
 
     $effect(() => {
         if (selected) processor = registry.getProcessor(selected);
+        else processor = null;
+    });
+
+    $effect(() => {
+        if (initialized) return;
+        initialized = true;
+        const requested = String(searchParams.get("type") || "");
+        if (requested) {
+            const candidate = registry.getProcessor(requested);
+            if (candidate?.creatable) selected = requested;
+        }
     });
 
     async function addResource(item: ItemMeta) {
@@ -24,7 +37,11 @@
             errorMsg = "Please login to create resources";
             return;
         }
-        if (!processor?.editor || !editorInstance) {
+        if (!processor) {
+            errorMsg = "Select a type first";
+            return;
+        }
+        if (processor.editor && !editorInstance) {
             errorMsg = "Editor not available";
             return;
         }
@@ -32,7 +49,7 @@
         errorMsg = "";
         successMsg = "";
         try {
-            const content = editorInstance.getContent();
+            const content = processor.editor ? editorInstance.getContent() : {};
             const res = await authFetch(`/api/nodes/typed`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -62,7 +79,7 @@
 </script>
 
 <Container class="my-2" fluid>
-    <h4>New Typed Resource</h4>
+    <h4>New Resource</h4>
     {#if errorMsg}
         <div class="alert alert-danger">{errorMsg}</div>
     {/if}
@@ -74,13 +91,21 @@
             <Label>Type</Label>
             <Input type="select" bind:value={selected}>
                 <option value="">Select type</option>
-                {#each registry.allEditors() as { type: type_id, name }}
+                {#each registry.allCreatable() as { type: type_id, name }}
                     <option value={type_id}>{name}</option>
                 {/each}
             </Input>
 
             {#if processor}
-                <processor.editor bind:this={editorInstance} />
+                {#if processor.editor}
+                    <processor.editor bind:this={editorInstance} />
+                {:else}
+                    <div class="alert alert-info mt-3 mb-0 small">
+                        <strong>{processor.name}</strong> has no content editor.
+                        Create it here, then link it from DAC Web or TPL; the
+                        source application will fill in its concrete type.
+                    </div>
+                {/if}
             {/if}
         </Col>
         <Col xs="4">

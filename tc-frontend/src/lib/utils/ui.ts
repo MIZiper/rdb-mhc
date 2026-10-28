@@ -59,3 +59,12 @@ export function visibilityColor(visibility: string): string {
         default: return "secondary";
     }
 }
+
+export function sourceSystemLabel(system: string | null | undefined): string {
+    switch (system) {
+        case "dac_web": return "DAC Web";
+        case "tpl": return "TPL";
+        case "windchill": return "WindChill";
+        default: return system || "external";
+    }
+}

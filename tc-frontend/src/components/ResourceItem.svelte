@@ -10,6 +10,7 @@
     import { getContext } from "svelte";
     import { hasRole, getAuthContext } from "../lib/auth.js";
     import {
+        sourceSystemLabel,
         statusColor,
         statusLabel,
         typeColor,
@@ -84,8 +85,11 @@
             <span>{item.update_time.toLocaleDateString()}</span>
             {#if item.source_url}
                 <a class="link-secondary text-decoration-none" href={item.source_url} target="_blank" rel="noreferrer">
-                    Source
+                    {sourceSystemLabel(item.source_system)}
                 </a>
+            {/if}
+            {#if item.frozen}
+                <span class="badge text-bg-warning">Frozen</span>
             {/if}
             {#if canEdit}
                 <a class="link-primary text-decoration-none" href="/items/{item.id}?edit=1">

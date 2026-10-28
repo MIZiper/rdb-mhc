@@ -18,6 +18,7 @@ export type { KeycloakConfig, AuthState } from "./lib/auth";
 export type {
     ItemMeta,
     ItemDetail,
+    NodeContribution,
     TypeDescriptor,
     FieldSpec,
     FieldKey,
@@ -37,6 +38,8 @@ export {
     queryNodes,
     aggregateNodes,
     batchNodeData,
+    fetchNodeContributions,
+    fetchContributionsBySource,
     fetchTagsInfo,
     constructTagsById,
 } from "./lib/api";

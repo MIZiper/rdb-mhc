@@ -81,6 +81,31 @@ CREATE INDEX IF NOT EXISTS idx_node_tags_tag_id ON node_tags(tag_id);
 CREATE INDEX IF NOT EXISTS idx_node_tags_node_id ON node_tags(node_id);
 
 -- ---------------------------------------------------------------------------
+-- Contributions: several source resources may push content into one node.
+-- The nodes.source_* columns remain the single owner link; this table records
+-- every source that contributed data (upserted per node + source resource).
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS node_contributions (
+    id               BIGSERIAL PRIMARY KEY,
+    node_id          UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+    source_system    VARCHAR(50) NOT NULL,
+    source_id        VARCHAR(255) NOT NULL,
+    source_part      VARCHAR(50) NOT NULL,
+    source_url       TEXT,
+    data_type        VARCHAR(50),
+    mode             VARCHAR(1) NOT NULL DEFAULT 'a',
+    push_count       INTEGER NOT NULL DEFAULT 1,
+    pushed_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    pushed_by        VARCHAR(255),
+    UNIQUE (node_id, source_system, source_id, source_part)
+);
+
+CREATE INDEX IF NOT EXISTS idx_node_contributions_node
+    ON node_contributions(node_id);
+CREATE INDEX IF NOT EXISTS idx_node_contributions_source
+    ON node_contributions(source_system, source_id, source_part);
+
+-- ---------------------------------------------------------------------------
 -- Files (bytes on disk under TC_STORAGE_ROOT; metadata here)
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS files (

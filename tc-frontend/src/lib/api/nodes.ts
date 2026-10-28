@@ -1,6 +1,7 @@
 import type {
     AggregateRequest,
     AggregateResult,
+    NodeContribution,
     NodeQuery,
     NodeQueryResult,
 } from "../../types";
@@ -35,6 +36,8 @@ export interface NodeState {
     source_url: string | null;
     source_linked_at: string | null;
     source_linked_by: string | null;
+    frozen: boolean;
+    source_item: boolean;
 }
 
 export function getNodeState(id: string): Promise<NodeState> {
@@ -56,6 +59,7 @@ export function attachNodeSource(
         source_id: string;
         source_part: string;
         source_url: string;
+        data_type?: string;
     },
 ): Promise<NodeState> {
     return request<NodeState>(`/api/nodes/${id}/source`, {
@@ -67,4 +71,17 @@ export function attachNodeSource(
 
 export function detachNodeSource(id: string): Promise<NodeState> {
     return request<NodeState>(`/api/nodes/${id}/source`, { method: "DELETE" });
+}
+
+export function fetchNodeContributions(id: string): Promise<NodeContribution[]> {
+    return request<NodeContribution[]>(`/api/nodes/${id}/contributions`);
+}
+
+export function fetchContributionsBySource(
+    sourceSystem: string,
+    sourceId: string,
+): Promise<NodeContribution[]> {
+    return request<NodeContribution[]>(
+        `/api/nodes/contributions?source_system=${encodeURIComponent(sourceSystem)}&source_id=${encodeURIComponent(sourceId)}`,
+    );
 }
