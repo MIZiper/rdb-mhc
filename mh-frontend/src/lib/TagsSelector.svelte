@@ -11,7 +11,7 @@
         ModalHeader,
     } from "@sveltestrap/sveltestrap";
     import type { Category, TagMeta } from "../schema";
-    import { getContext, onMount } from "svelte";
+    import { getContext, onMount, untrack } from "svelte";
 
     interface Layer {
         options: TagMeta[];
@@ -22,15 +22,31 @@
         onSelect = null,
         onCancel = null,
         isOpen = true,
+        initialTags = [],
+        allowEmpty = false,
     }: {
         onSelect: ((tags: TagMeta[]) => void) | null;
         isOpen: boolean;
         onCancel: (() => void) | null;
+        initialTags?: TagMeta[];
+        allowEmpty?: boolean;
     } = $props();
+
+    function dedupeTags(tags: TagMeta[]): TagMeta[] {
+        const seen = new Set<number | string>();
+        const result: TagMeta[] = [];
+        for (const tag of tags) {
+            const key = tag.id ?? tag.name;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            result.push(tag);
+        }
+        return result;
+    }
 
     let categories: Category[] = $state([]);
     let tagLayers: Layer[] = $state([]);
-    let candidateTags: TagMeta[] = $state([]);
+    let candidateTags: TagMeta[] = $state(untrack(() => dedupeTags(initialTags)));
     let currentTag: TagMeta | null = $state(null);
     let metahub_host = (getContext("mh_host") as string) || "";
 
@@ -120,11 +136,19 @@
     <ModalHeader>Tags selector</ModalHeader>
 
     <ModalBody>
-        <div class="mb-2">
+        <div class="d-flex flex-wrap align-items-center gap-1 mb-2">
             {#each candidateTags as tag}
-                <Badge class="me-1" ondblclick={() => removeTag(tag)}
-                    >{tag.name}</Badge
-                >
+                <Badge class="d-inline-flex align-items-center gap-1 pe-1">
+                    {tag.name}
+                    <button
+                        type="button"
+                        class="btn-close btn-close-white"
+                        style="font-size:0.6rem;"
+                        aria-label="Remove {tag.name}"
+                        title="Remove"
+                        onclick={() => removeTag(tag)}
+                    ></button>
+                </Badge>
             {/each}
         </div>
         <FormGroup>
@@ -170,7 +194,7 @@
         <ButtonGroup>
             <Button
                 color="primary"
-                disabled={candidateTags.length === 0}
+                disabled={candidateTags.length === 0 && !allowEmpty}
                 onclick={() => {
                     if (onSelect) onSelect(candidateTags);
                 }}>Submit</Button

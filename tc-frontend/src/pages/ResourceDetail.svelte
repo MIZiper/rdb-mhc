@@ -475,8 +475,12 @@
     {/if}
 </Container>
 
-<TagsSelector
-    isOpen={tagSelectorOpen}
-    onSelect={useTags}
-    onCancel={() => { tagSelectorOpen = false; }}
-/>
+{#if tagSelectorOpen}
+    <TagsSelector
+        isOpen={true}
+        initialTags={editTags}
+        allowEmpty
+        onSelect={useTags}
+        onCancel={() => { tagSelectorOpen = false; }}
+    />
+{/if}
