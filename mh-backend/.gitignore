@@ -9,4 +9,4 @@ wheels/
 # Virtual environments
 .venv
 
-metahub/db/z_*.sql
+metahub/db/z_*.sql*

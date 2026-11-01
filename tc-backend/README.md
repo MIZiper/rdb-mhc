@@ -87,7 +87,7 @@ PUT /api/nodes/{id}/push/data
   multiple contributing projects.
 - `GET /api/nodes/{id}/contributions` and
   `GET /api/nodes/contributions?source_system=...&source_id=...` expose them.
-- Frozen nodes (`frozen = true` or status in `TC_FROZEN_STATUSES`, default
+- Frozen nodes (status in `TC_FROZEN_STATUSES`, default
   `pending_review,published,archived`) reject pushes with `423 Locked`.
 - Direct content writes on source-linked nodes are limited to
   `nodes:edit_any`; push permission follows the normal creator/`nodes:edit_any`

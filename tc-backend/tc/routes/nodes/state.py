@@ -39,7 +39,7 @@ router = APIRouter(prefix="/nodes")
 
 _STATE_COLUMNS = """id, title, description, content_type, status, updated_at,
                     source_system, source_id, source_part, source_url,
-                    source_linked_at, source_linked_by, frozen"""
+                    source_linked_at, source_linked_by"""
 
 
 def _can_see_row(row, user: Optional[dict]) -> bool:
@@ -69,7 +69,7 @@ async def _state(conn: Connection, row) -> NodeStateRead:
         source_url=row.get("source_url"),
         source_linked_at=row.get("source_linked_at"),
         source_linked_by=row.get("source_linked_by"),
-        frozen=is_frozen(row.get("status"), row.get("frozen", False)),
+        frozen=is_frozen(row.get("status")),
         source_item=is_source_item(row.get("content_type")),
     )
 
@@ -151,7 +151,7 @@ async def attach_node_source(
     async with conn.transaction():
         existing = await conn.fetchrow(
             """SELECT creator_sub, source_system, source_id, source_part,
-                      content_type, content, status, frozen
+                      content_type, content, status
                FROM nodes WHERE id=$1 FOR UPDATE""",
             node_id,
         )
@@ -159,7 +159,7 @@ async def attach_node_source(
             raise HTTPException(status_code=404, detail="Node not found")
         check_edit_node(user, existing.get("creator_sub"))
 
-        if is_frozen(existing.get("status"), existing.get("frozen", False)):
+        if is_frozen(existing.get("status")):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Node is frozen and cannot be linked",
@@ -234,7 +234,7 @@ async def detach_node_source(
 ):
     async with conn.transaction():
         existing = await conn.fetchrow(
-            """SELECT creator_sub, status, source_system, content_type, content, frozen
+            """SELECT creator_sub, status, source_system, content_type, content
                FROM nodes WHERE id=$1 FOR UPDATE""",
             node_id,
         )
@@ -245,7 +245,7 @@ async def detach_node_source(
         if existing.get("source_system") is None:
             raise HTTPException(status_code=404, detail="Node has no source link")
         if (
-            is_frozen(existing.get("status"), existing.get("frozen", False))
+            is_frozen(existing.get("status"))
             or existing["status"] != "draft"
         ) and ROLE_REVIEW not in user.get("roles", []):
             raise HTTPException(

@@ -82,9 +82,6 @@
                     {sourceSystemLabel(item.source_system)}
                 </a>
             {/if}
-            {#if item.frozen}
-                <span class="badge text-bg-warning">Frozen</span>
-            {/if}
         </div>
     </CardFooter>
 </Card>

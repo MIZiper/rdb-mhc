@@ -206,7 +206,12 @@
             selectedStatus = REVIEW_STATUS_OPTIONS.includes(data.status)
                 ? data.status
                 : "";
-            item = { ...item, status: data.status, update_time: new Date(data.updated_at) };
+            item = {
+                ...item,
+                status: data.status,
+                frozen: !!data.frozen,
+                update_time: new Date(data.updated_at),
+            };
         } catch (e: any) {
             statusError = e.message;
         } finally {

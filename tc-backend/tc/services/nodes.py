@@ -26,11 +26,11 @@ from tc.settings import settings
 NODE_META_COLUMNS = """n.id, n.title, n.description, n.updated_at, n.content_type,
                        n.creator_name, n.creator_sub, n.status, n.visibility,
                        n.source_system, n.source_id, n.source_part, n.source_url,
-                       n.source_linked_at, n.source_linked_by, n.frozen"""
+                       n.source_linked_at, n.source_linked_by"""
 
 
-def is_frozen(status: Optional[str], frozen: bool = False) -> bool:
-    return bool(frozen) or bool(status and status in settings.frozen_status_set)
+def is_frozen(status: Optional[str]) -> bool:
+    return bool(status and status in settings.frozen_status_set)
 
 
 def row_to_meta(row, tag_ids: Optional[list[int]] = None) -> NodeMetaRead:
@@ -51,7 +51,7 @@ def row_to_meta(row, tag_ids: Optional[list[int]] = None) -> NodeMetaRead:
         source_url=row.get("source_url"),
         source_linked_at=row.get("source_linked_at"),
         source_linked_by=row.get("source_linked_by"),
-        frozen=is_frozen(row["status"], row.get("frozen", False)),
+        frozen=is_frozen(row["status"]),
         source_item=is_source_item(row["content_type"]),
     )
 

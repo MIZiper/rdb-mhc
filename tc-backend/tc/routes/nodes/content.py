@@ -136,7 +136,7 @@ async def get_node_data(
                   created_at, updated_at,
                   creator_name, creator_sub, status, visibility,
                   source_system, source_id, source_part, source_url,
-                  source_linked_at, source_linked_by, frozen
+                  source_linked_at, source_linked_by
            FROM nodes WHERE id=$1""",
         node_id,
     )
@@ -170,7 +170,7 @@ async def get_node_data(
         source_url=row.get("source_url"),
         source_linked_at=row.get("source_linked_at"),
         source_linked_by=row.get("source_linked_by"),
-        frozen=is_frozen(row["status"], row.get("frozen", False)),
+        frozen=is_frozen(row["status"]),
         source_item=is_source_item(row.get("content_type")),
     )
 
@@ -184,7 +184,7 @@ async def patch_node_data(
 ):
     row = await conn.fetchrow(
         """SELECT content, content_type, creator_sub, source_system,
-                  status, frozen, created_at
+                  status, created_at
            FROM nodes WHERE id=$1""",
         node_id,
     )
@@ -217,7 +217,7 @@ async def patch_node_data(
         "source_url": updated.get("source_url"),
         "source_linked_at": updated.get("source_linked_at"),
         "source_linked_by": updated.get("source_linked_by"),
-        "frozen": is_frozen(updated["status"], row.get("frozen", False)),
+        "frozen": is_frozen(updated["status"]),
         "source_item": is_source_item(row.get("content_type")),
     }
 
@@ -230,7 +230,7 @@ async def ingest_node_data(
     user: dict = Depends(get_current_user),
 ):
     existing = await conn.fetchrow(
-        """SELECT id, creator_sub, source_system, status, frozen, created_at
+        """SELECT id, creator_sub, source_system, status, created_at
            FROM nodes WHERE id=$1""",
         node_id,
     )
@@ -263,7 +263,7 @@ async def ingest_node_data(
         source_url=row.get("source_url"),
         source_linked_at=row.get("source_linked_at"),
         source_linked_by=row.get("source_linked_by"),
-        frozen=is_frozen(row["status"], existing.get("frozen", False)),
+        frozen=is_frozen(row["status"]),
         source_item=is_source_item(content_type),
     )
 

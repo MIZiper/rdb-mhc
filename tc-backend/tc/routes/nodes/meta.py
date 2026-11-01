@@ -47,7 +47,7 @@ _SELECT = f"SELECT {NODE_META_COLUMNS} FROM nodes n"
 _RETURNING = """RETURNING id, title, description, updated_at, content_type,
                 creator_name, creator_sub, status, visibility,
                 source_system, source_id, source_part, source_url,
-                source_linked_at, source_linked_by, frozen"""
+                source_linked_at, source_linked_by"""
 
 
 def _can_see_row(row, user: Optional[dict]) -> bool:
@@ -80,7 +80,6 @@ async def list_nodes(
             SELECT
                 id, title, description, updated_at, n.content_type,
                 n.creator_name, n.creator_sub, n.status, n.visibility,
-                n.frozen,
                 ts_headline('english', title, query,
                             'StartSel=<strong>, StopSel=</strong>') AS title_highlight,
                 ts_rank(search_vector, query) AS relevance
@@ -102,7 +101,6 @@ async def list_nodes(
             SELECT
                 id, title, description, updated_at, n.content_type,
                 n.creator_name, n.creator_sub, n.status, n.visibility,
-                n.frozen,
                 NULL AS title_highlight, NULL AS relevance
             FROM nodes n
             {v_clause}
@@ -155,7 +153,6 @@ async def search_nodes_by_tags(
         SELECT
             n.id, n.title, n.description, n.updated_at, n.content_type,
             n.creator_name, n.creator_sub, n.status, n.visibility,
-            n.frozen,
             COUNT(nt.tag_id) AS match_count,
             (
                 SELECT array_agg(t2.tag_id)
@@ -235,7 +232,6 @@ async def list_push_candidates(
     clauses = [
         "n.content_type IS NOT NULL",
         "n.source_system IS NULL",
-        "n.frozen = FALSE",
     ]
     if settings.frozen_status_set:
         args.append(sorted(settings.frozen_status_set))

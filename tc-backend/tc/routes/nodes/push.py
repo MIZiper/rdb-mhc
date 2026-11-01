@@ -101,7 +101,7 @@ async def push_to_node(
 
     async with conn.transaction():
         node = await conn.fetchrow(
-            """SELECT id, creator_sub, frozen, status, content, content_type,
+            """SELECT id, creator_sub, status, content, content_type,
                       source_system
                FROM nodes WHERE id=$1 FOR UPDATE""",
             node_id,
@@ -110,7 +110,7 @@ async def push_to_node(
             raise HTTPException(status_code=404, detail="Node not found")
         check_edit_node(user, node.get("creator_sub"))
 
-        if is_frozen(node.get("status"), node.get("frozen", False)):
+        if is_frozen(node.get("status")):
             raise HTTPException(
                 status_code=status.HTTP_423_LOCKED,
                 detail="Node is frozen, cannot be changed.",

@@ -31,10 +31,9 @@ CREATE TABLE IF NOT EXISTS nodes (
     content        JSONB NOT NULL DEFAULT '{}',
     content_type   VARCHAR(50),
     valid          BOOLEAN NOT NULL DEFAULT TRUE,
-    -- release / analysis links and freezing
+    -- release / analysis links
     backlink       VARCHAR(255),
     frozenlink     VARCHAR(255),
-    frozen         BOOLEAN NOT NULL DEFAULT FALSE,
     validate_key   VARCHAR(20) DEFAULT NULL,
     -- source resource represented by this catalog node
     source_system      VARCHAR(50),
@@ -57,6 +56,10 @@ ALTER TABLE nodes ADD COLUMN IF NOT EXISTS source_part VARCHAR(50);
 ALTER TABLE nodes ADD COLUMN IF NOT EXISTS source_url TEXT;
 ALTER TABLE nodes ADD COLUMN IF NOT EXISTS source_linked_at TIMESTAMP;
 ALTER TABLE nodes ADD COLUMN IF NOT EXISTS source_linked_by VARCHAR(255);
+
+-- Immutability is derived from status (TC_FROZEN_STATUSES); the old manual
+-- ``frozen`` flag was never written by the application.
+ALTER TABLE nodes DROP COLUMN IF EXISTS frozen;
 
 CREATE INDEX IF NOT EXISTS idx_nodes_search_vector ON nodes USING GIN (search_vector);
 CREATE INDEX IF NOT EXISTS idx_nodes_source ON nodes(source_system, source_id, source_part);
