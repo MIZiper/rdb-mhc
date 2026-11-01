@@ -18,7 +18,7 @@
     import { getContext, onMount } from "svelte";
     import { constructTagsById, fetchTagsInfo } from "../lib/api/metahub";
     import { registry, type BaseProcessor } from "../modules/registry";
-    import { authFetch, hasRole, getAuthContext } from "../lib/auth";
+    import { authFetch, hasRole, getAuthState } from "../lib/auth";
     import { deleteImage } from "../lib/api/files";
     import { fetchNodeContributions } from "../lib/api/nodes";
     import SourcePanel from "../components/SourcePanel.svelte";
@@ -64,7 +64,7 @@
     function checkCanEdit(): boolean {
         if (hasRole("nodes:edit_any")) return true;
         if (!item) return false;
-        return item.creator_sub === getAuthContext()?.user?.sub;
+        return item.creator_sub === getAuthState().user?.sub;
     }
 
     function checkCanEditContent(): boolean {

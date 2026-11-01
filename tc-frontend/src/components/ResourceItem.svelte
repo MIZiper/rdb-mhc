@@ -8,7 +8,6 @@
     } from "@sveltestrap/sveltestrap";
     import type { ItemMeta } from "../types";
     import { getContext } from "svelte";
-    import { hasRole, getAuthContext } from "../lib/auth.js";
     import {
         sourceSystemLabel,
         statusColor,
@@ -26,11 +25,6 @@
         class?: string;
     } = $props();
     let metahub_host = (getContext("mh_host") as string) || "";
-
-    let canEdit = $derived(
-        hasRole("nodes:edit_any") ||
-        (item.creator_sub === getAuthContext()?.user?.sub)
-    );
 </script>
 
 <Card class="position-relative shadow-sm {item.data_type ? 'ps-4' : ''} {className}">
@@ -90,11 +84,6 @@
             {/if}
             {#if item.frozen}
                 <span class="badge text-bg-warning">Frozen</span>
-            {/if}
-            {#if canEdit}
-                <a class="link-primary text-decoration-none" href="/items/{item.id}?edit=1">
-                    Edit
-                </a>
             {/if}
         </div>
     </CardFooter>

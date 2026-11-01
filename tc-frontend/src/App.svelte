@@ -68,14 +68,12 @@
         </DropdownMenu>
       </Dropdown>
       {#if auth.authenticated}
-        <NavItem>
-          <NavLink class="link-light" href="/mine">My Workspace</NavLink>
-        </NavItem>
-      {/if}
-      {#if auth.authenticated}
-        <NavItem>
-          <span class="nav-link text-warning">{auth.user?.name || auth.user?.sub}</span>
-        </NavItem>
+        <Dropdown nav>
+          <DropdownToggle nav caret class="text-warning">{auth.user?.name || auth.user?.sub}</DropdownToggle>
+          <DropdownMenu end>
+            <DropdownItem href="/mine">My Workspace</DropdownItem>
+          </DropdownMenu>
+        </Dropdown>
         <NavItem>
           <NavLink class="link-light" onclick={doLogout}>Logout</NavLink>
         </NavItem>
