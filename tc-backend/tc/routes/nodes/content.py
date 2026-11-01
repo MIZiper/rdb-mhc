@@ -132,7 +132,8 @@ async def get_node_data(
     user=Depends(get_optional_user),
 ):
     row = await conn.fetchrow(
-        """SELECT id, title, description, content, content_type, updated_at,
+        """SELECT id, title, description, content, content_type,
+                  created_at, updated_at,
                   creator_name, creator_sub, status, visibility,
                   source_system, source_id, source_part, source_url,
                   source_linked_at, source_linked_by, frozen
@@ -156,6 +157,7 @@ async def get_node_data(
         description=row["description"],
         content=row["content"],
         data_type=row["content_type"],
+        created_at=row.get("created_at"),
         updated_at=row["updated_at"],
         tag_ids=tags_map.get(node_id, []),
         creator_name=row["creator_name"],
@@ -182,7 +184,7 @@ async def patch_node_data(
 ):
     row = await conn.fetchrow(
         """SELECT content, content_type, creator_sub, source_system,
-                  status, frozen
+                  status, frozen, created_at
            FROM nodes WHERE id=$1""",
         node_id,
     )
@@ -202,6 +204,7 @@ async def patch_node_data(
         "description": updated["description"],
         "content": merged,
         "data_type": row["content_type"],
+        "created_at": row.get("created_at"),
         "updated_at": updated["updated_at"],
         "tag_ids": tags_map.get(node_id, []),
         "creator_name": updated["creator_name"],
@@ -227,7 +230,7 @@ async def ingest_node_data(
     user: dict = Depends(get_current_user),
 ):
     existing = await conn.fetchrow(
-        """SELECT id, creator_sub, source_system, status, frozen
+        """SELECT id, creator_sub, source_system, status, frozen, created_at
            FROM nodes WHERE id=$1""",
         node_id,
     )
@@ -247,6 +250,7 @@ async def ingest_node_data(
         description=row["description"],
         content=payload.content,
         data_type=content_type,
+        created_at=existing.get("created_at"),
         updated_at=row["updated_at"],
         tag_ids=tags_map.get(node_id, []),
         creator_name=row["creator_name"],

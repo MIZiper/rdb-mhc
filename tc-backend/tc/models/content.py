@@ -36,6 +36,7 @@ class NodeContentRead(BaseModel):
     id: UUID
     title: str
     description: Optional[str] = None
+    created_at: Optional[datetime] = None
     updated_at: datetime
     content: Any
     data_type: Optional[str] = None

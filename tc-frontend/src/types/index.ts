@@ -7,6 +7,7 @@ export interface ItemMeta {
     id: string | null;
     title: string;
     description: string;
+    created_at?: Date | null;
     update_time: Date;
     tags: TagMeta[];
     data_type: string | null;

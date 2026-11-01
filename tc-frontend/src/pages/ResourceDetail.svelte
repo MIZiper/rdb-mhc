@@ -88,6 +88,7 @@
             id: data.id,
             title: data.title,
             description: data.description,
+            created_at: data.created_at ? new Date(data.created_at) : null,
             update_time: new Date(data.updated_at),
             tags: constructTagsById(data.tag_ids, tags_cache),
             data_type: data.data_type,
@@ -409,6 +410,10 @@
                             <dl class="row small mb-0">
                                 <dt class="col-4 fw-normal text-secondary">Creator</dt>
                                 <dd class="col-8 mb-2 text-truncate">{item.creator_name || "—"}</dd>
+                                <dt class="col-4 fw-normal text-secondary">Created</dt>
+                                <dd class="col-8 mb-2">
+                                    {item.created_at ? item.created_at.toLocaleDateString() : "—"}
+                                </dd>
                                 <dt class="col-4 fw-normal text-secondary">Updated</dt>
                                 <dd class="col-8 mb-2">{item.update_time.toLocaleDateString()}</dd>
                                 <dt class="col-4 fw-normal text-secondary">Type</dt>
