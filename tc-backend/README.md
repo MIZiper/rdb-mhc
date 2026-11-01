@@ -51,7 +51,8 @@ attaches itself through:
 
 - `GET /api/nodes/source-candidates` — unlinked Source Items the caller can edit
 - `GET /api/nodes/{id}/state`
-- `PATCH /api/nodes/{id}/state` (`nodes:review`)
+- `PATCH /api/nodes/{id}/state` — submit a draft for review (creator) or review
+  a node in `pending_review` (reviewer)
 - `GET/PUT/DELETE /api/nodes/{id}/source`
 
 `PUT /api/nodes/{id}/source` accepts a `data_type` owned by that source (for
@@ -141,11 +142,24 @@ merging them into a single set.
 |---|---|
 | `nodes:create` | Create new nodes |
 | `nodes:read_all` | See all nodes regardless of visibility |
-| `nodes:edit_any` | Edit any node (bypasses creator check) |
-| `nodes:review` | Change node status (draft / pending_review / published / archived) |
+| `nodes:edit_any` | Edit any node (bypasses creator check and review lock) |
+| `nodes:review` | Process nodes in `pending_review` (to `draft`, `published` or `archived`) |
 
 **Owner fallback:** a node's creator can always edit and see their own nodes,
 even without the roles above.
+
+### Review workflow
+
+- A node is created as `draft`. Its creator (or a `nodes:edit_any` holder) can
+  submit it with `PATCH /api/nodes/{id}/state` and `{"status": "pending_review"}`.
+- Only `nodes:review` may change a `pending_review` node, and only to `draft`,
+  `published` or `archived`. Other transitions (including creator withdrawal and
+  `published → archived`) are rejected.
+- Only `draft` nodes can be edited. Metadata or content changes to
+  `pending_review`, `published` or `archived` nodes are rejected with `409`;
+  `nodes:edit_any` remains the administrative repair path. Nodes in
+  `pending_review` are also frozen for external source pushes
+  (`TC_FROZEN_STATUSES`).
 
 ### Visibility roles
 

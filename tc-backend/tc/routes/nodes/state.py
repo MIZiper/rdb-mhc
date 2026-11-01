@@ -18,7 +18,7 @@ from tc.auth.permissions import (
     ROLE_REVIEW,
     can_see_node,
     check_edit_node,
-    require_role,
+    check_status_transition,
 )
 from tc.auth.provider import get_current_user, get_optional_user
 from tc.content_types.registry import (
@@ -94,15 +94,24 @@ async def update_node_state(
     node_id: UUID,
     body: NodeStatusUpdate,
     conn: Connection = Depends(get_db),
-    user: dict = Depends(require_role(ROLE_REVIEW)),
+    user: dict = Depends(get_current_user),
 ):
-    row = await conn.fetchrow(
-        f"UPDATE nodes SET status=$1 WHERE id=$2 RETURNING {_STATE_COLUMNS}",
-        body.status,
-        node_id,
-    )
-    if row is None:
-        raise HTTPException(status_code=404, detail="Node not found")
+    async with conn.transaction():
+        existing = await conn.fetchrow(
+            "SELECT creator_sub, status FROM nodes WHERE id=$1 FOR UPDATE",
+            node_id,
+        )
+        if existing is None:
+            raise HTTPException(status_code=404, detail="Node not found")
+        check_status_transition(
+            user, existing.get("creator_sub"), existing["status"], body.status
+        )
+        row = await conn.fetchrow(
+            f"""UPDATE nodes SET status=$1, updated_at=NOW()
+                WHERE id=$2 RETURNING {_STATE_COLUMNS}""",
+            body.status,
+            node_id,
+        )
     return await _state(conn, row)
 
 

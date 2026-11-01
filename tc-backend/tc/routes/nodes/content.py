@@ -17,6 +17,7 @@ from tc.auth.permissions import (
     ROLE_EDIT_ANY,
     can_see_node,
     check_edit_node,
+    check_status_edit_allowed,
     require_role,
 )
 from tc.auth.provider import get_current_user, get_optional_user
@@ -188,6 +189,7 @@ async def patch_node_data(
     if row is None:
         raise HTTPException(status_code=404, detail="Node not found")
     check_edit_node(user, row.get("creator_sub"))
+    check_status_edit_allowed(user, row.get("status"))
     _check_source_content_edit(row, user)
 
     merged = _deep_merge(row["content"] or {}, updates)
@@ -232,6 +234,7 @@ async def ingest_node_data(
     if existing is None:
         raise HTTPException(status_code=404, detail="Node not found")
     check_edit_node(user, existing.get("creator_sub"))
+    check_status_edit_allowed(user, existing.get("status"))
     _check_source_content_edit(existing, user)
 
     content_type = payload.data_type or _embedded_type(payload.content)

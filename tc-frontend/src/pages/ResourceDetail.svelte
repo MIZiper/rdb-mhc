@@ -56,14 +56,15 @@
     let contentSaving = $state(false);
     let contentError = $state("");
 
-    const STATUS_OPTIONS = ["draft", "pending_review", "published", "archived"];
-    let selectedStatus = $state("draft");
+    const REVIEW_STATUS_OPTIONS = ["draft", "published", "archived"];
+    let selectedStatus = $state("");
     let statusSaving = $state(false);
     let statusError = $state("");
 
     function checkCanEdit(): boolean {
         if (hasRole("nodes:edit_any")) return true;
         if (!item) return false;
+        if (item.status !== "draft") return false;
         return item.creator_sub === getAuthState().user?.sub;
     }
 
@@ -102,7 +103,9 @@
             frozen: !!data.frozen,
             source_item: !!data.source_item,
         };
-        selectedStatus = data.status;
+        selectedStatus = REVIEW_STATUS_OPTIONS.includes(data.status)
+            ? data.status
+            : "";
 
         fetchNodeContributions(item_id)
             .then((rows) => {
@@ -182,15 +185,16 @@
         }
     }
 
-    async function saveStatus() {
+    async function saveStatus(target?: string) {
         if (!item) return;
+        const next = target ?? selectedStatus;
         statusSaving = true;
         statusError = "";
         try {
             const res = await authFetch(`/api/nodes/${item_id}/state`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: selectedStatus }),
+                body: JSON.stringify({ status: next }),
             });
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
@@ -198,12 +202,19 @@
                 return;
             }
             const data = await res.json();
+            selectedStatus = REVIEW_STATUS_OPTIONS.includes(data.status)
+                ? data.status
+                : "";
             item = { ...item, status: data.status, update_time: new Date(data.updated_at) };
         } catch (e: any) {
             statusError = e.message;
         } finally {
             statusSaving = false;
         }
+    }
+
+    function submitForReview() {
+        return saveStatus("pending_review");
     }
 
     function useTags(_tags: TagMeta[]) {
@@ -405,10 +416,11 @@
                                 <dt class="col-4 fw-normal text-secondary">Visibility</dt>
                                 <dd class="col-8 mb-0">{item.visibility}</dd>
                             </dl>
-                            {#if hasRole("nodes:review")}
+                            {#if hasRole("nodes:review") && item.status === "pending_review"}
                                 <Label class="mt-3">Status</Label>
                                 <Input type="select" bind:value={selectedStatus}>
-                                    {#each STATUS_OPTIONS as option}
+                                    <option value="" disabled>Select new status...</option>
+                                    {#each REVIEW_STATUS_OPTIONS as option}
                                         <option value={option}>{option}</option>
                                     {/each}
                                 </Input>
@@ -419,11 +431,26 @@
                                     color="outline-secondary"
                                     size="sm"
                                     class="mt-2"
-                                    disabled={statusSaving}
-                                    onclick={saveStatus}
+                                    disabled={statusSaving || !selectedStatus}
+                                    onclick={() => saveStatus()}
                                 >
                                     {statusSaving ? "Saving..." : "Update status"}
                                 </Button>
+                            {:else if item.status === "draft" && checkCanEdit()}
+                                {#if statusError}
+                                    <div class="text-danger small mt-1">{statusError}</div>
+                                {/if}
+                                <Button
+                                    color="outline-secondary"
+                                    size="sm"
+                                    class="mt-3"
+                                    disabled={statusSaving}
+                                    onclick={submitForReview}
+                                >
+                                    {statusSaving ? "Submitting..." : "Submit for review"}
+                                </Button>
+                            {:else if item.status === "pending_review"}
+                                <p class="small text-secondary mt-3 mb-0">Waiting for review.</p>
                             {/if}
                         </CardBody>
                     </Card>

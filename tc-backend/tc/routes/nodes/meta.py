@@ -16,9 +16,10 @@ from asyncpg.connection import Connection
 from tc.auth.permissions import (
     ROLE_CREATE,
     ROLE_EDIT_ANY,
-    ROLE_REVIEW,
     can_see_node,
     check_edit_node,
+    check_status_edit_allowed,
+    check_status_transition,
     require_role,
 )
 from tc.auth.provider import get_current_user, get_optional_user
@@ -329,11 +330,12 @@ async def update_node_meta(
     user: dict = Depends(get_current_user),
 ):
     existing = await conn.fetchrow(
-        "SELECT id, creator_sub FROM nodes WHERE id=$1", node_id
+        "SELECT id, creator_sub, status FROM nodes WHERE id=$1", node_id
     )
     if existing is None:
         raise HTTPException(status_code=404, detail="Node not found")
     check_edit_node(user, existing.get("creator_sub"))
+    check_status_edit_allowed(user, existing.get("status"))
 
     if node.status is not None:
         raise HTTPException(
@@ -413,16 +415,21 @@ async def update_node_status(
     node_id: UUID,
     body: NodeStatusUpdate,
     conn: Connection = Depends(get_db),
-    user: dict = Depends(require_role(ROLE_REVIEW)),
+    user: dict = Depends(get_current_user),
 ):
-    existing = await conn.fetchrow("SELECT id FROM nodes WHERE id=$1", node_id)
-    if existing is None:
-        raise HTTPException(status_code=404, detail="Node not found")
-
-    row = await conn.fetchrow(
-        f"UPDATE nodes SET status=$1, updated_at=NOW() WHERE id=$2 {_RETURNING}",
-        body.status,
-        node_id,
-    )
+    async with conn.transaction():
+        existing = await conn.fetchrow(
+            "SELECT creator_sub, status FROM nodes WHERE id=$1 FOR UPDATE", node_id
+        )
+        if existing is None:
+            raise HTTPException(status_code=404, detail="Node not found")
+        check_status_transition(
+            user, existing.get("creator_sub"), existing["status"], body.status
+        )
+        row = await conn.fetchrow(
+            f"UPDATE nodes SET status=$1, updated_at=NOW() WHERE id=$2 {_RETURNING}",
+            body.status,
+            node_id,
+        )
     tags_map = await load_tags_map(conn, [node_id])
     return row_to_meta(row, tags_map.get(node_id, []))
