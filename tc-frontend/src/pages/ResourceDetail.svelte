@@ -280,11 +280,11 @@
                     <p class="text-secondary mb-2">{item.description}</p>
                 {/if}
                 <div class="d-flex flex-wrap align-items-center gap-1">
-                    <span class="small text-secondary me-1">Tags</span>
+                    <span class="small text-secondary me-1">Tags:</span>
                     {#each item.tags as tag}
                         <TagChip {tag} metahubHost={metahub_host} />
                     {:else}
-                        <span class="small text-muted">No tags</span>
+                        <span class="small text-muted">[No tags]</span>
                     {/each}
                 </div>
             </div>
@@ -294,15 +294,6 @@
                 </Button>
             {/if}
         </div>
-
-        {#if item.source_system}
-            <SourcePanel
-                sourceSystem={item.source_system}
-                sourcePart={item.source_part}
-                sourceUrl={item.source_url}
-                frozen={item.frozen}
-            />
-        {/if}
 
         <Row class="g-4">
             <Col lg="8">
@@ -314,6 +305,15 @@
                         </Button>
                     {/if}
                 </div>
+
+                {#if item.source_system}
+                    <SourcePanel
+                        sourceSystem={item.source_system}
+                        sourcePart={item.source_part}
+                        sourceUrl={item.source_url}
+                        frozen={item.frozen}
+                    />
+                {/if}
 
                 {#if !processor}
                     <p>Registered type: [{item.data_type}] (no viewer found)</p>
@@ -333,12 +333,7 @@
                     </div>
                 {:else if processor.viewer}
                     <processor.viewer content_in={item.content} />
-                {:else if item.source_system}
-                    <p class="text-muted">
-                        Content is managed by {item.source_system}. Use the source
-                        application to view or change it.
-                    </p>
-                {:else}
+                {:else if !item.source_system}
                     <p class="text-muted">No content</p>
                 {/if}
             </Col>
@@ -408,15 +403,7 @@
                                 <dt class="col-4 fw-normal text-secondary">Type</dt>
                                 <dd class="col-8 mb-2">{item.data_type || "—"}</dd>
                                 <dt class="col-4 fw-normal text-secondary">Visibility</dt>
-                                <dd class="col-8 mb-2">{item.visibility}</dd>
-                                {#if item.source_url}
-                                    <dt class="col-4 fw-normal text-secondary">Source</dt>
-                                    <dd class="col-8 mb-0">
-                                        <a href={item.source_url} target="_blank" rel="noreferrer">
-                                            {item.source_system || "external"}{item.source_part ? ` / ${item.source_part}` : ""}
-                                        </a>
-                                    </dd>
-                                {/if}
+                                <dd class="col-8 mb-0">{item.visibility}</dd>
                             </dl>
                             {#if hasRole("nodes:review")}
                                 <Label class="mt-3">Status</Label>
